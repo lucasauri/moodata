@@ -35,6 +35,14 @@ import { AppUser } from './types';
 import { userKey } from './auth';
 import AdminPanel from './AdminPanel';
 import { motion, AnimatePresence } from 'motion/react';
+import { Card } from './components/ui/Card';
+import { Button } from './components/ui/Button';
+import { useFarmAlerts } from './hooks/useFarmAlerts';
+import { HomePage } from './pages/HomePage';
+import { HerdPage } from './pages/HerdPage';
+import { MilkingPage } from './pages/MilkingPage';
+import { HealthPage } from './pages/HealthPage';
+import { ConfigPage } from './pages/ConfigPage';
 import { format, subDays, isSameDay, startOfDay, parseISO, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
@@ -82,46 +90,6 @@ const INITIAL_CONFIG: FarmConfig = {
 
 // --- Components ---
 
-const Card = ({ children, className = "", ...props }: { children: React.ReactNode, className?: string, [key: string]: any }) => (
-  <div className={`rounded-2xl p-4 shadow-sm border border-agro-green-100 ${!className.includes('bg-') ? 'bg-white' : ''} ${className}`} {...props}>
-    {children}
-  </div>
-);
-
-const Button = ({ 
-  children, 
-  onClick, 
-  variant = 'primary', 
-  className = "",
-  disabled = false,
-  type = 'button'
-}: { 
-  children: React.ReactNode, 
-  onClick?: () => void, 
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost',
-  className?: string,
-  disabled?: boolean,
-  type?: 'button' | 'submit'
-}) => {
-  const variants = {
-    primary: 'bg-agro-green-600 text-white active:bg-agro-green-700',
-    secondary: 'bg-agro-earth text-white active:bg-amber-900',
-    outline: 'border-2 border-agro-green-600 text-agro-green-600 active:bg-agro-green-50',
-    ghost: 'text-slate-600 active:bg-slate-100'
-  };
-
-  return (
-    <button 
-      type={type}
-      onClick={onClick}
-      disabled={disabled}
-      className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${variants[variant]} ${className}`}
-    >
-      {children}
-    </button>
-  );
-};
-
 // --- Main App ---
 
 export default function App({ currentUser, onLogout }: { currentUser: AppUser; onLogout: () => void }) {
@@ -139,8 +107,6 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
   const [isAddingProduction, setIsAddingProduction] = useState(false);
   const [isAddingAnimal, setIsAddingAnimal] = useState(false);
   const [isAddingEvent, setIsAddingEvent] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeCategory, setActiveCategory] = useState<'all' | 'cow' | 'heifer' | 'drying' | 'calving'>('all');
   const [showToast, setShowToast] = useState(false);
   const [detailModal, setDetailModal] = useState<{ title: string, animals: Animal[] } | null>(null);
 
@@ -224,28 +190,6 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
     });
   }, [productions, selectedAnimalId]);
 
-  const filteredAnimals = useMemo(() => {
-    return animals.filter(a => {
-      const matchesSearch = a.name.toLowerCase().includes(searchTerm.toLowerCase()) || a.tag.includes(searchTerm);
-      
-      let matchesCategory = true;
-      if (activeCategory === 'cow') matchesCategory = a.category === 'cow';
-      else if (activeCategory === 'heifer') matchesCategory = a.category === 'heifer';
-      else if (activeCategory === 'drying') {
-        // Animals close to drying date (within 30 days) or already dry
-        const daysToDry = a.dryingDate ? differenceInDays(parseISO(a.dryingDate), new Date()) : 999;
-        matchesCategory = a.status === 'dry' || (daysToDry >= 0 && daysToDry <= 30);
-      }
-      else if (activeCategory === 'calving') {
-        // Animals close to calving (within 30 days)
-        const daysToCalve = a.expectedCalving ? differenceInDays(parseISO(a.expectedCalving), new Date()) : 999;
-        matchesCategory = (daysToCalve >= 0 && daysToCalve <= 30) || a.status === 'pre-calving';
-      }
-
-      return matchesSearch && matchesCategory;
-    });
-  }, [animals, searchTerm, activeCategory]);
-
   // Handlers
   const handleAddProduction = (e: React.FormEvent) => {
     e.preventDefault();
@@ -267,6 +211,20 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
     setNewProdAmount('');
     setNewProdObs('');
     triggerToast();
+  };
+
+  const handleClearData = () => {
+    if (confirm('Deseja apagar todos os dados?')) {
+      localStorage.removeItem(userKey(currentUser.id, 'animals'));
+      localStorage.removeItem(userKey(currentUser.id, 'productions'));
+      localStorage.removeItem(userKey(currentUser.id, 'events'));
+      localStorage.removeItem(userKey(currentUser.id, 'config'));
+      setAnimals([]);
+      setProductions([]);
+      setEvents([]);
+      setConfig({ ...INITIAL_CONFIG, name: currentUser.farmName || INITIAL_CONFIG.name, producer: currentUser.name });
+      triggerToast();
+    }
   };
 
   const handleAddAnimal = (e: React.FormEvent) => {
@@ -325,107 +283,7 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
     triggerToast();
   };
 
-  const alerts = useMemo(() => {
-    const list: { type: 'red' | 'amber' | 'green', icon: React.ReactNode, text: string }[] = [];
-    
-    // 1. Group Calvings (Parto) - 7 days before
-    const upcomingCalvings: Record<string, string[]> = {};
-    animals.filter(a => a.expectedCalving).forEach(a => {
-      const days = differenceInDays(parseISO(a.expectedCalving!), new Date());
-      if (days >= 0 && days <= 7) {
-        const dateStr = format(parseISO(a.expectedCalving!), 'dd/MM');
-        if (!upcomingCalvings[dateStr]) upcomingCalvings[dateStr] = [];
-        upcomingCalvings[dateStr].push(a.tag);
-      }
-    });
-
-    Object.entries(upcomingCalvings).forEach(([date, tags]) => {
-      list.push({ 
-        type: 'red', 
-        icon: <Calendar size={16} />, 
-        text: `Dia ${date}: ${tags.length} animais vão parir (${tags.join(', ')})` 
-      });
-    });
-
-    // 2. Group Drying (Secagem) - 15 days before
-    const upcomingDrying: Record<string, string[]> = {};
-    animals.filter(a => (a.status === 'lactation' || a.status === 'pregnant')).forEach(a => {
-      let targetDryingDate = a.dryingDate;
-      
-      if (!targetDryingDate && a.expectedCalving) {
-        // Calculate suggested drying date: expectedCalving - dryingPeriodDays
-        const expectedDate = parseISO(a.expectedCalving);
-        targetDryingDate = subDays(expectedDate, config.dryingPeriodDays).toISOString();
-      }
-
-      if (targetDryingDate) {
-        const days = differenceInDays(parseISO(targetDryingDate), new Date());
-        if (days >= 0 && days <= 15) {
-          const dateStr = format(parseISO(targetDryingDate), 'dd/MM');
-          if (!upcomingDrying[dateStr]) upcomingDrying[dateStr] = [];
-          upcomingDrying[dateStr].push(a.tag);
-        }
-      }
-    });
-
-    Object.entries(upcomingDrying).forEach(([date, tags]) => {
-      list.push({ 
-        type: 'amber', 
-        icon: <Activity size={16} />, 
-        text: `Dia ${date}: ${tags.length} animais para secagem (${tags.join(', ')})` 
-      });
-    });
-
-    // 3. Group Milk Withdrawal (Descarte de Leite)
-    const withdrawalGroups: Record<string, string[]> = {};
-    events.filter(e => e.type === 'medication' && e.withdrawalDays).forEach(e => {
-      const eventDate = parseISO(e.date);
-      const daysSince = differenceInDays(new Date(), eventDate);
-      const remaining = (e.withdrawalDays || 0) - daysSince;
-      
-      if (remaining > 0) {
-        const animal = animals.find(a => a.id === e.animalId);
-        if (animal) {
-          const endDate = format(subDays(new Date(), -remaining), 'dd/MM');
-          if (!withdrawalGroups[endDate]) withdrawalGroups[endDate] = [];
-          if (!withdrawalGroups[endDate].includes(animal.tag)) {
-            withdrawalGroups[endDate].push(animal.tag);
-          }
-        }
-      }
-    });
-
-    Object.entries(withdrawalGroups).forEach(([date, tags]) => {
-      list.push({ 
-        type: 'red', 
-        icon: <AlertTriangle size={16} />, 
-        text: `Descarte de leite de ${tags.length} animais até ${date} (${tags.join(', ')})` 
-      });
-    });
-
-    // 4. Group PVE (Prontas para Inseminação)
-    const readyForInsemination: string[] = [];
-    animals.filter(a => a.status === 'lactation' && a.lastCalving).forEach(a => {
-      const daysSinceCalving = differenceInDays(new Date(), parseISO(a.lastCalving!));
-      if (daysSinceCalving >= config.pveDays) {
-        readyForInsemination.push(a.tag);
-      }
-    });
-
-    if (readyForInsemination.length > 0) {
-      list.push({
-        type: 'amber',
-        icon: <TrendingUp size={16} />,
-        text: `${readyForInsemination.length} animais prontos para inseminação (PVE de ${config.pveDays} dias concluído: ${readyForInsemination.join(', ')})`
-      });
-    }
-
-    if (list.length === 0) {
-      list.push({ type: 'green', icon: <Check size={16} />, text: 'Tudo em ordem por agora' });
-    }
-
-    return list;
-  }, [events, animals, config]);
+  const alerts = useFarmAlerts(animals, events, config);
 
   const toggleAnimalStatus = (id: string) => {
     setAnimals(animals.map(a => {
@@ -667,569 +525,59 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
               </section>
             </motion.div>
           ) : activeTab === 'home' && (
-            <motion.div 
-              key="home"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="space-y-6"
-            >
-              {/* Summary Cards */}
-              <div className="grid grid-cols-2 gap-4">
-                <Card className="bg-agro-green-700 text-white border-none relative overflow-hidden col-span-2 shadow-lg">
-                  <div className="relative z-10">
-                    <p className="text-agro-green-50 text-sm font-semibold opacity-90">Total de Animais</p>
-                    <h2 className="text-4xl font-bold mt-1">{animals.length}</h2>
-                    <div className="flex gap-4 mt-3 text-xs font-bold text-white">
-                      <button 
-                        onClick={() => setDetailModal({ title: 'Vacas Leiteiras', animals: animals.filter(a => a.category === 'cow') })}
-                        className="bg-white/20 px-2 py-1 rounded-lg active:bg-white/40 transition-colors"
-                      >
-                        🐄 {cowCount} Vacas
-                      </button>
-                      <button 
-                        onClick={() => setDetailModal({ title: 'Novilhas', animals: animals.filter(a => a.category === 'heifer') })}
-                        className="bg-white/20 px-2 py-1 rounded-lg active:bg-white/40 transition-colors"
-                      >
-                        🐄 {heiferCount} Novilhas
-                      </button>
-                      <button 
-                        onClick={() => setDetailModal({ title: 'Animais em Lactação', animals: animals.filter(a => a.status === 'lactation') })}
-                        className="bg-white/20 px-2 py-1 rounded-lg active:bg-white/40 transition-colors"
-                      >
-                        🥛 {lactationCount} Em Lactação
-                      </button>
-                    </div>
-                  </div>
-                  <Activity className="absolute -right-4 -bottom-4 text-white/20" size={120} />
-                </Card>
-                
-                <Card className="bg-blue-700 text-white border-none relative overflow-hidden shadow-md">
-                  <div className="relative z-10">
-                    <p className="text-blue-50 text-sm font-semibold opacity-90">Leite Hoje</p>
-                    <h2 className="text-2xl font-bold mt-1">{todayProduction.toFixed(1)}L</h2>
-                  </div>
-                  <Milk className="absolute -right-2 -bottom-2 text-white/20" size={70} />
-                </Card>
-
-                <Card className="bg-agro-earth text-white border-none relative overflow-hidden shadow-md">
-                  <div className="relative z-10">
-                    <p className="text-amber-50 text-sm font-semibold opacity-90">Alertas Ativos</p>
-                    <h2 className="text-2xl font-bold mt-1">{alerts.filter(a => a.type !== 'green').length}</h2>
-                  </div>
-                  <AlertTriangle className="absolute -right-2 -bottom-2 text-white/20" size={70} />
-                </Card>
-
-                {/* Cash Flow Summary */}
-                <Card className="col-span-2 bg-white border-agro-green-100 shadow-sm p-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                      <DollarSign size={18} className="text-agro-green-600" />
-                      Fluxo de Caixa
-                    </h3>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Este Mês</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600">
-                        <ArrowUpRight size={20} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Receitas</p>
-                        <p className="font-bold text-green-600">R$ 12.450</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-600">
-                        <ArrowDownLeft size={20} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Despesas</p>
-                        <p className="font-bold text-red-600">R$ 8.200</p>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-
-              {/* Today's Tasks */}
-              <section>
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-lg font-bold flex items-center gap-2">
-                    <ClipboardList size={20} className="text-agro-green-600" />
-                    Tarefas de Hoje
-                  </h3>
-                  <span className="bg-agro-green-100 text-agro-green-700 text-[10px] font-bold px-2 py-1 rounded-full">
-                    {events.filter(e => isSameDay(parseISO(e.date), new Date())).length} PENDENTES
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  {events.filter(e => isSameDay(parseISO(e.date), new Date())).map(task => {
-                    const animal = animals.find(a => a.id === task.animalId);
-                    return (
-                      <Card key={task.id} className="flex items-center gap-4 border-l-4 border-l-agro-green-600">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                          task.type === 'vaccine' ? 'bg-red-50 text-red-600' : 
-                          task.type === 'insemination' ? 'bg-purple-50 text-purple-600' :
-                          'bg-blue-50 text-blue-600'
-                        }`}>
-                          {task.type === 'vaccine' ? <Activity size={20} /> : 
-                           task.type === 'insemination' ? <Info size={20} /> :
-                           <Calendar size={20} />}
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-bold text-sm text-slate-800">{task.description}</p>
-                          <p className="text-xs text-slate-500">{animal?.name} ({animal?.tag})</p>
-                        </div>
-                        <button className="w-8 h-8 rounded-full border-2 border-slate-200 flex items-center justify-center text-slate-300 hover:border-agro-green-600 hover:text-agro-green-600 transition-colors">
-                          <Check size={16} />
-                        </button>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </section>
-
-              {/* Production Chart */}
-              <Card className="p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                    <TrendingUp size={18} className="text-agro-green-600" />
-                    Produção Semanal
-                  </h3>
-                  <span className="text-xs font-bold text-agro-green-600 bg-agro-green-50 px-2 py-1 rounded-lg">
-                    Últimos 7 dias
-                  </span>
-                </div>
-                <div className="h-48 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData}>
-                      <defs>
-                        <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#16a34a" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#16a34a" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis 
-                        dataKey="name" 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{ fontSize: 10, fill: '#94a3b8' }}
-                        dy={10}
-                      />
-                      <YAxis hide />
-                      <Tooltip 
-                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                        labelStyle={{ fontWeight: 'bold', color: '#16a34a' }}
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="total" 
-                        stroke="#16a34a" 
-                        strokeWidth={3}
-                        fillOpacity={1} 
-                        fill="url(#colorTotal)" 
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
-
-              {/* Alerts */}
-              <section>
-                <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
-                  <AlertTriangle size={18} className="text-agro-green-600" />
-                  Alertas
-                </h3>
-                <div className="space-y-2">
-                  {alerts.map((alert, idx) => {
-                    const isPVE = alert.text.includes('PVE');
-                    return (
-                      <div 
-                        key={idx} 
-                        onClick={() => {
-                          if (isPVE) {
-                            const pveAnimals = animals.filter(a => a.status === 'lactation' && a.lastCalving && differenceInDays(new Date(), parseISO(a.lastCalving)) >= config.pveDays);
-                            setDetailModal({ title: 'Prontas para Inseminação (PVE)', animals: pveAnimals });
-                          }
-                        }}
-                        className={`flex items-start gap-3 p-3 rounded-xl border-l-4 ${
-                          alert.type === 'red' ? 'bg-red-50 border-red-500 text-red-700' :
-                          alert.type === 'amber' ? 'bg-amber-50 border-amber-500 text-amber-700' :
-                          'bg-agro-green-50 border-agro-green-500 text-agro-green-700'
-                        } ${isPVE ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''}`}
-                      >
-                        <div className="mt-0.5">{alert.icon}</div>
-                        <p className="text-sm font-medium">{alert.text}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-
-              {/* Quick Actions */}
-              <section>
-                <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
-                  <Plus size={18} className="text-agro-green-600" />
-                  Ações Rápidas
-                </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <button 
-                    onClick={() => setIsAddingProduction(true)}
-                    className="p-4 bg-white rounded-2xl border border-agro-green-100 shadow-sm flex flex-col items-center gap-2 active:scale-95 transition-transform"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-                      <Milk size={24} />
-                    </div>
-                    <span className="font-semibold text-sm">Lançar Leite</span>
-                  </button>
-                  <button 
-                    onClick={() => setIsAddingAnimal(true)}
-                    className="p-4 bg-white rounded-2xl border border-agro-green-100 shadow-sm flex flex-col items-center gap-2 active:scale-95 transition-transform"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-agro-green-50 flex items-center justify-center text-agro-green-600">
-                      <Plus size={24} />
-                    </div>
-                    <span className="font-semibold text-sm">Novo Animal</span>
-                  </button>
-                </div>
-              </section>
-            </motion.div>
+            <HomePage
+              animals={animals}
+              productions={productions}
+              events={events}
+              config={config}
+              todayProduction={todayProduction}
+              cowCount={cowCount}
+              heiferCount={heiferCount}
+              lactationCount={lactationCount}
+              alerts={alerts}
+              chartData={chartData}
+              setDetailModal={setDetailModal}
+              setIsAddingProduction={setIsAddingProduction}
+              setIsAddingAnimal={setIsAddingAnimal}
+            />
           )}
 
           {activeTab === 'herd' && (
-            <motion.div 
-              key="herd"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-4"
-            >
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="text-xl font-bold">Meu Rebanho</h2>
-                <Button variant="ghost" className="p-2" onClick={() => setIsAddingAnimal(true)}>
-                  <Plus size={20} />
-                </Button>
-              </div>
-
-              <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                {[
-                  { id: 'all', label: 'Todos', icon: '🐾' },
-                  { id: 'cow', label: 'Vacas', icon: '🐄' },
-                  { id: 'heifer', label: 'Novilhas', icon: '🐄' },
-                  { id: 'drying', label: 'Secagem', icon: '🍂' },
-                  { id: 'calving', label: 'Parimento', icon: '🍼' }
-                ].map(cat => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setActiveCategory(cat.id as any)}
-                    className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-bold transition-all ${
-                      activeCategory === cat.id 
-                        ? 'bg-agro-green-600 text-white shadow-md' 
-                        : 'bg-white text-slate-500 border border-agro-green-100'
-                    }`}
-                  >
-                    {cat.icon} {cat.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input 
-                  type="text" 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Buscar por nome ou brinco..."
-                  className="w-full pl-10 pr-4 py-3 bg-white rounded-xl border border-agro-green-100 focus:ring-2 focus:ring-agro-green-600 outline-none"
-                />
-                {searchTerm && (
-                  <button 
-                    onClick={() => setSearchTerm('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  >
-                    <X size={16} />
-                  </button>
-                )}
-              </div>
-
-              <div className="space-y-3">
-                {filteredAnimals.length > 0 ? filteredAnimals.map(animal => (
-                  <Card 
-                    key={animal.id} 
-                    className="flex items-center justify-between group active:bg-slate-50 transition-colors cursor-pointer"
-                    onClick={() => setSelectedAnimalId(animal.id)}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-agro-green-100 flex items-center justify-center text-agro-green-600 font-bold">
-                        {animal.tag}
-                      </div>
-                      <div>
-                        <h3 className="font-bold">{animal.name}</h3>
-                        <p className="text-xs text-slate-500">{animal.breed} • {animal.category === 'cow' ? 'Vaca' : 'Novilha'}</p>
-                        <div className="flex gap-2 mt-1">
-                          {animal.expectedCalving && (
-                            <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1 rounded">
-                              Parto: {format(parseISO(animal.expectedCalving), 'dd/MM')}
-                            </span>
-                          )}
-                          {animal.lastCalving && (
-                            <span className="text-[9px] font-bold text-slate-500 bg-slate-100 px-1 rounded">
-                              DEL: {differenceInDays(new Date(), parseISO(animal.lastCalving))}d
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
-                        animal.status === 'lactation' ? 'bg-green-100 text-green-700' :
-                        animal.status === 'pregnant' ? 'bg-blue-100 text-blue-700' :
-                        animal.status === 'dry' ? 'bg-slate-100 text-slate-700' :
-                        animal.status === 'pre-calving' ? 'bg-orange-100 text-orange-700' :
-                        'bg-red-100 text-red-700'
-                      }`}>
-                        {animal.status === 'lactation' ? 'Lactação' :
-                         animal.status === 'pregnant' ? 'Prenha' :
-                         animal.status === 'dry' ? 'Seca' : 
-                         animal.status === 'pre-calving' ? 'Pré-Parto' : 'Doente'}
-                      </span>
-                      <ChevronRight size={18} className="text-slate-300" />
-                    </div>
-                  </Card>
-                )) : (
-                  <div className="text-center py-12">
-                    <p className="text-slate-400 font-medium">Nenhum animal encontrado.</p>
-                  </div>
-                )}
-              </div>
-            </motion.div>
+            <HerdPage
+              animals={animals}
+              setIsAddingAnimal={setIsAddingAnimal}
+              setSelectedAnimalId={setSelectedAnimalId}
+            />
           )}
 
           {activeTab === 'milking' && (
-            <motion.div 
-              key="milking"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-4"
-            >
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="text-xl font-bold">Histórico de Ordenha</h2>
-                <Button variant="ghost" className="p-2" onClick={() => setIsAddingProduction(true)}>
-                  <Plus size={20} />
-                </Button>
-              </div>
-
-              {/* Stats Summary */}
-              <div className="grid grid-cols-2 gap-3">
-                <Card className="bg-blue-600 text-white border-none">
-                  <p className="text-[10px] font-bold opacity-80 uppercase">Média por Tirada</p>
-                  <p className="text-xl font-bold">
-                    {productions.length > 0 
-                      ? (productions.reduce((acc, curr) => acc + curr.amount, 0) / productions.length).toFixed(1) 
-                      : '0.0'}L
-                  </p>
-                </Card>
-                <Card className="bg-agro-green-600 text-white border-none">
-                  <p className="text-[10px] font-bold opacity-80 uppercase">Total Hoje</p>
-                  <p className="text-xl font-bold">{todayProduction.toFixed(1)}L</p>
-                </Card>
-              </div>
-
-              <div className="space-y-3">
-                {productions.map(prod => {
-                  const animal = animals.find(a => a.id === prod.animalId);
-                  return (
-                    <Card key={prod.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
-                          <Milk size={20} />
-                        </div>
-                        <div>
-                          <h3 className="font-bold">{animal?.name}</h3>
-                          <p className="text-xs text-slate-500">{format(new Date(prod.date), "dd/MM 'às' HH:mm", { locale: ptBR })}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-agro-green-700">{prod.amount}L</p>
-                        <p className="text-[10px] text-slate-400 uppercase font-bold">{prod.period === 'morning' ? 'Manhã' : 'Tarde'}</p>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            </motion.div>
+            <MilkingPage
+              productions={productions}
+              animals={animals}
+              todayProduction={todayProduction}
+              setIsAddingProduction={setIsAddingProduction}
+            />
           )}
 
           {activeTab === 'health' && (
-            <motion.div 
-              key="events"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-4"
-            >
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="text-xl font-bold">Eventos do Rebanho</h2>
-                <Button variant="ghost" className="p-2" onClick={() => setIsAddingEvent(true)}>
-                  <Plus size={20} />
-                </Button>
-              </div>
-              
-              <div className="space-y-6">
-                {/* Grouped Alerts are already on Home, here we show the detailed list but filtered */}
-                <div className="space-y-3">
-                  {events
-                    .filter(e => e.type === 'medication' || e.type === 'calving')
-                    .map(event => {
-                    const animal = animals.find(a => a.id === event.animalId);
-                    return (
-                      <Card key={event.id} className="flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                          event.type === 'calving' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'
-                        }`}>
-                          {event.type === 'calving' ? <Calendar size={24} /> : <Info size={24} />}
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-bold text-sm">{event.description}</p>
-                          <p className="text-xs text-slate-500">{animal?.name} (Brinco {animal?.tag})</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs font-bold text-agro-green-700">{format(new Date(event.date), 'dd/MM/yy')}</p>
-                          {event.withdrawalDays && (
-                            <p className="text-[10px] text-red-500 font-bold mt-1 uppercase">Carência</p>
-                          )}
-                        </div>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
-            </motion.div>
+            <HealthPage
+              events={events}
+              animals={animals}
+              setIsAddingEvent={setIsAddingEvent}
+            />
           )}
 
           {activeTab === 'config' && (
-            <motion.div 
-              key="config"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
-            >
-              <h2 className="text-xl font-bold">Configurações</h2>
-              
-              <Card className="space-y-4">
-                <h3 className="font-bold text-agro-green-700 border-b border-agro-green-100 pb-2">Minha Fazenda</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase">Nome</p>
-                      <p className="font-medium">{config.name}</p>
-                    </div>
-                    <Button variant="ghost" className="text-xs h-8 px-2" onClick={() => {
-                      const val = prompt('Nome da Fazenda', config.name);
-                      if (val) setConfig({ ...config, name: val });
-                    }}>Editar</Button>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase">Produtor</p>
-                      <p className="font-medium">{config.producer}</p>
-                    </div>
-                    <Button variant="ghost" className="text-xs h-8 px-2" onClick={() => {
-                      const val = prompt('Nome do Produtor', config.producer);
-                      if (val) setConfig({ ...config, producer: val });
-                    }}>Editar</Button>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase">Localização</p>
-                      <p className="font-medium">{config.location}</p>
-                    </div>
-                    <Button variant="ghost" className="text-xs h-8 px-2" onClick={() => {
-                      const val = prompt('Localização', config.location);
-                      if (val) setConfig({ ...config, location: val });
-                    }}>Editar</Button>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="space-y-4">
-                <h3 className="font-bold text-agro-green-700 border-b border-agro-green-100 pb-2">Ciclo Reprodutivo</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase">PVE (Espera Pós-Parto)</p>
-                      <p className="font-medium">{config.pveDays} dias</p>
-                    </div>
-                    <Button variant="ghost" className="text-xs h-8 px-2" onClick={() => {
-                      const val = prompt('Dias de PVE (Período Voluntário de Espera)', config.pveDays.toString());
-                      if (val) setConfig({ ...config, pveDays: parseInt(val) || 60 });
-                    }}>Editar</Button>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase">Período de Secagem</p>
-                      <p className="font-medium">{config.dryingPeriodDays} dias</p>
-                    </div>
-                    <Button variant="ghost" className="text-xs h-8 px-2" onClick={() => {
-                      const val = prompt('Dias para Secagem (antes do parto)', config.dryingPeriodDays.toString());
-                      if (val) setConfig({ ...config, dryingPeriodDays: parseInt(val) || 60 });
-                    }}>Editar</Button>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="space-y-4">
-                <h3 className="font-bold text-agro-green-700 border-b border-agro-green-100 pb-2">Dados do App</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 bg-slate-50 rounded-xl">
-                    <p className="text-xs font-bold text-slate-400 uppercase">Animais</p>
-                    <p className="text-xl font-bold">{animals.length}</p>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-xl">
-                    <p className="text-xs font-bold text-slate-400 uppercase">Registros</p>
-                    <p className="text-xl font-bold">{productions.length}</p>
-                  </div>
-                </div>
-                <Button variant="outline" className="w-full" onClick={() => {
-                  if (confirm('Deseja apagar todos os dados?')) {
-                    localStorage.removeItem(userKey(currentUser.id, 'animals'));
-                    localStorage.removeItem(userKey(currentUser.id, 'productions'));
-                    localStorage.removeItem(userKey(currentUser.id, 'events'));
-                    localStorage.removeItem(userKey(currentUser.id, 'config'));
-                    setAnimals([]);
-                    setProductions([]);
-                    setEvents([]);
-                    setConfig({ ...INITIAL_CONFIG, name: currentUser.farmName || INITIAL_CONFIG.name, producer: currentUser.name });
-                    triggerToast();
-                  }
-                }}>Limpar Dados</Button>
-              </Card>
-
-              <div className="text-center py-4">
-                <p className="text-xs text-slate-400">AgroLeite v1.1 · {currentUser.name}</p>
-                <p className="text-[10px] text-slate-300">{currentUser.email}</p>
-              </div>
-
-              {/* Admin — gerenciar usuários */}
-              {currentUser.role === 'admin' && (
-                <Button variant="outline" className="w-full" onClick={() => setShowAdmin(true)}>
-                  <Users size={16} />
-                  Gerenciar Usuários
-                </Button>
-              )}
-
-              {/* Sair */}
-              <Button variant="ghost" className="w-full text-red-500" onClick={() => {
-                if (confirm('Deseja sair da sua conta?')) onLogout();
-              }}>
-                <LogOut size={16} />
-                Sair da conta
-              </Button>
-            </motion.div>
+            <ConfigPage
+              config={config}
+              setConfig={setConfig}
+              animalsCount={animals.length}
+              productionsCount={productions.length}
+              currentUser={currentUser}
+              onClearData={handleClearData}
+              onShowAdmin={() => setShowAdmin(true)}
+              onLogout={onLogout}
+            />
           )}
         </AnimatePresence>
       </main>

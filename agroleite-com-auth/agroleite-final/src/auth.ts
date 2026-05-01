@@ -1,37 +1,28 @@
 import { AppUser, UserRole } from './types';
+import api from './services/api';
 
 const TOKEN_KEY = 'agro_jwt_token';
 const USER_KEY = 'agro_user';
-const API_URL = 'http://localhost:3001'; // Ajustado para 3001
 
 export async function login(
   email: string,
   password: string
 ): Promise<{ success: boolean; user?: AppUser; error?: string }> {
   try {
-    const response = await fetch(`${API_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+    const response = await api.post('/auth/login', { email, password });
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        return { success: false, error: 'Credenciais inválidas.' };
-      }
-      return { success: false, error: 'Erro ao fazer login. Tente novamente mais tarde.' };
-    }
-
-    const data = await response.json();
-    const { access_token, user } = data;
+    const { access_token, user } = response.data;
 
     // Salvar token e dados do usuário logado
     localStorage.setItem(TOKEN_KEY, access_token);
     localStorage.setItem(USER_KEY, JSON.stringify(user));
 
     return { success: true, user };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro na requisição de login:', error);
+    if (error.response && error.response.status === 401) {
+      return { success: false, error: 'Credenciais inválidas.' };
+    }
     return { success: false, error: 'Erro de conexão com o servidor.' };
   }
 }
@@ -75,7 +66,13 @@ export async function createUser(params: {
   role: UserRole;
   farmName?: string;
 }): Promise<{ success: boolean; error?: string; user?: AppUser }> {
-  return { success: false, error: 'Criação de usuários deve ser feita no backend.' };
+  try {
+    const response = await api.post('/auth/register', params);
+    return { success: true, user: response.data };
+  } catch (error: any) {
+    const errorMsg = error.response?.data?.message || 'Erro ao criar usuário.';
+    return { success: false, error: errorMsg };
+  }
 }
 
 export function toggleUserActive(userId: string): void {
