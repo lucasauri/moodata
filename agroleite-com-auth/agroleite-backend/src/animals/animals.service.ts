@@ -30,10 +30,16 @@ export class AnimalsService {
 
   private formatAnimalData(data: any) {
     const formatted = { ...data };
-    
+
     // Converter datas de string para Date
-    const dateFields = ['birthDate', 'lastInsemination', 'lastCalving', 'expectedCalving', 'dryingDate'];
-    dateFields.forEach(field => {
+    const dateFields = [
+      'birthDate',
+      'lastInsemination',
+      'lastCalving',
+      'expectedCalving',
+      'dryingDate',
+    ];
+    dateFields.forEach((field) => {
       if (formatted[field]) {
         formatted[field] = new Date(formatted[field]);
       } else {
@@ -42,9 +48,12 @@ export class AnimalsService {
     });
 
     // Garantir que números sejam números e não NaN
-    if (formatted.dailyTarget !== undefined) formatted.dailyTarget = parseFloat(formatted.dailyTarget) || 0;
-    if (formatted.weight !== undefined) formatted.weight = formatted.weight ? parseFloat(formatted.weight) : null;
-    if (formatted.ecc !== undefined) formatted.ecc = formatted.ecc ? parseFloat(formatted.ecc) : null;
+    if (formatted.dailyTarget !== undefined)
+      formatted.dailyTarget = parseFloat(formatted.dailyTarget) || 0;
+    if (formatted.weight !== undefined)
+      formatted.weight = formatted.weight ? parseFloat(formatted.weight) : null;
+    if (formatted.ecc !== undefined)
+      formatted.ecc = formatted.ecc ? parseFloat(formatted.ecc) : null;
 
     return formatted;
   }
@@ -56,7 +65,9 @@ export class AnimalsService {
   }
 
   private async ensureOwnership(userId: string, id: string) {
-    const animal = await this.prisma.animal.findFirst({ where: { id, userId } });
+    const animal = await this.prisma.animal.findFirst({
+      where: { id, userId },
+    });
     if (!animal) throw new NotFoundException('Animal não encontrado');
     return animal;
   }

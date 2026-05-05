@@ -129,7 +129,7 @@ export default function LoginScreen({ onLogin }: Props) {
 
         {/* Rodapé */}
         <p className="text-center text-agro-green-300 text-xs mt-6">
-          AgroLeite v1.1 · Dados salvos localmente
+          AgroLeite v1.1 · Dados sincronizados na nuvem
         </p>
       </motion.div>
     </div>

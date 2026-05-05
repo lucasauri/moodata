@@ -1,6 +1,13 @@
 import {
-  Controller, Get, Post, Patch, Delete,
-  Body, Param, UseGuards, Request,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { AnimalsService } from './animals.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';

@@ -43,7 +43,6 @@ export function userKey(userId: string, key: string): string {
   return `agro_${userId}_${key}`;
 }
 
-export async function initAuth(): Promise<void> {}
 
 /** Busca todos os usuários do backend (somente admin) */
 export async function getUsers(): Promise<AppUser[]> {
@@ -87,12 +86,5 @@ export async function deleteUser(userId: string): Promise<void> {
   } catch (error: any) {
     console.error('Erro ao remover usuário:', error);
   }
-}
-
-export async function changePassword(
-  userId: string,
-  newPassword: string
-): Promise<void> {
-  // Implementar se necessário
 }
 

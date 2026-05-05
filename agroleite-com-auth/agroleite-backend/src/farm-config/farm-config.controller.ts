@@ -1,7 +1,4 @@
-import {
-  Controller, Get, Put,
-  Body, UseGuards, Request,
-} from '@nestjs/common';
+import { Controller, Get, Put, Body, UseGuards, Request } from '@nestjs/common';
 import { FarmConfigService } from './farm-config.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 

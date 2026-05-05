@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -7,20 +11,23 @@ import { PrismaService } from '../prisma/prisma.service';
 export class AuthService {
   constructor(
     private jwtService: JwtService,
-    private prisma: PrismaService
+    private prisma: PrismaService,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.prisma.user.findUnique({
-      where: { email: email.toLowerCase() }
+      where: { email: email.toLowerCase() },
     });
-    
+
     if (user) {
       if (!user.active) {
-        throw new UnauthorizedException('Conta bloqueada. Entre em contato com o administrador.');
+        throw new UnauthorizedException(
+          'Conta bloqueada. Entre em contato com o administrador.',
+        );
       }
       const isMatch = await bcrypt.compare(pass, user.password);
       if (isMatch) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { password, ...result } = user;
         return result;
       }
@@ -40,7 +47,7 @@ export class AuthService {
     const { name, email, password, role, farmName } = data;
 
     const existingUser = await this.prisma.user.findUnique({
-      where: { email: email.toLowerCase() }
+      where: { email: email.toLowerCase() },
     });
 
     if (existingUser) {
@@ -57,9 +64,10 @@ export class AuthService {
         password: hashedPassword,
         role: role || 'user',
         farmName,
-      }
+      },
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...result } = user;
     return result;
   }

@@ -16,7 +16,7 @@ export class ProductionsService {
   async create(userId: string, data: any) {
     const productionDate = data.date ? new Date(data.date) : new Date();
     const amount = parseFloat(data.amount) || 0;
-    
+
     return this.prisma.milkProduction.create({
       data: {
         ...data,
@@ -28,9 +28,11 @@ export class ProductionsService {
   }
 
   async remove(userId: string, id: string) {
-    const prod = await this.prisma.milkProduction.findFirst({ where: { id, userId } });
+    const prod = await this.prisma.milkProduction.findFirst({
+      where: { id, userId },
+    });
     if (!prod) throw new NotFoundException('Produção não encontrada');
-    
+
     await this.prisma.milkProduction.delete({ where: { id } });
     return { success: true };
   }

@@ -1,6 +1,12 @@
 import {
-  Controller, Get, Post, Delete,
-  Body, Param, UseGuards, Request,
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { HealthService } from './health.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';

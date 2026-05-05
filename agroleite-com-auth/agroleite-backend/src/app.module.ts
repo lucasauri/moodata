@@ -28,4 +28,3 @@ import { FarmConfigModule } from './farm-config/farm-config.module';
   providers: [AppService],
 })
 export class AppModule {}
-

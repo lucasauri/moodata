@@ -32,7 +32,6 @@ import {
   Shield
 } from 'lucide-react';
 import { AppUser } from './types';
-import { userKey } from './auth';
 import AdminPanel from './AdminPanel';
 import { motion, AnimatePresence } from 'motion/react';
 import { Card } from './components/ui/Card';
@@ -362,7 +361,7 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
             </button>
           )}
           <div>
-            <h1 className="text-2xl font-bold text-agro-green-700 font-serif">
+            <h1 className="text-2xl font-bold text-agro-green-700">
               {selectedAnimalId ? selectedAnimal?.name : config.name}
             </h1>
             <div className="flex items-center gap-2 text-slate-500 text-xs">
