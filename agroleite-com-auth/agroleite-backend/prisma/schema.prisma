@@ -1,22 +1,90 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      String   @default("user") // 'admin' ou 'user'
-  farmName  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String           @id @default(uuid())
+  email       String           @unique
+  password    String
+  name        String
+  role        String           @default("user")
+  farmName    String?
+  active      Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  animals     Animal[]
+  productions MilkProduction[]
+  events      HealthEvent[]
+  farmConfig  FarmConfig?
+}
+
+model Animal {
+  id               String           @id @default(uuid())
+  userId           String
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name             String
+  tag              String
+  breed            String
+  category         String
+  status           String
+  dailyTarget      Float?
+  weight           Float?
+  ecc              Float?
+  birthDate        DateTime?
+  lastInsemination DateTime?
+  lastCalving      DateTime?
+  expectedCalving  DateTime?
+  dryingDate       DateTime?
+  productions      MilkProduction[]
+  events           HealthEvent[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+model MilkProduction {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  animalId    String
+  animal      Animal   @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  date        DateTime
+  amount      Float
+  period      String
+  quality     String
+  destination String
+  observation String?
+  createdAt   DateTime @default(now())
+}
+
+model HealthEvent {
+  id             String    @id @default(uuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  animalId       String
+  animal         Animal    @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  date           DateTime
+  nextDoseDate   DateTime?
+  type           String
+  description    String
+  responsible    String?
+  withdrawalDays Int?
+  createdAt      DateTime  @default(now())
+}
+
+model FarmConfig {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name             String
+  producer         String
+  location         String
+  pveDays          Int      @default(60)
+  dryingPeriodDays Int      @default(60)
+  updatedAt        DateTime @updatedAt
 }

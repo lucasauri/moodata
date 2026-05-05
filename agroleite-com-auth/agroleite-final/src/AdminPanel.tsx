@@ -1,14 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Users, UserPlus, Shield, ShieldOff, Trash2,
-  Eye, EyeOff, X, ChevronRight, Check, AlertCircle,
+  Eye, EyeOff, X, Check, AlertCircle,
   Crown, User as UserIcon
 } from 'lucide-react';
 import { AppUser, UserRole } from './types';
 import { getUsers, createUser, toggleUserActive, deleteUser } from './auth';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 
 interface Props {
   currentUser: AppUser;
@@ -16,7 +14,7 @@ interface Props {
 }
 
 export default function AdminPanel({ currentUser, onClose }: Props) {
-  const [users, setUsers]       = useState<AppUser[]>(getUsers);
+  const [users, setUsers]       = useState<AppUser[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading]   = useState(false);
   const [toast, setToast]       = useState('');
@@ -31,9 +29,14 @@ export default function AdminPanel({ currentUser, onClose }: Props) {
   const [farmName, setFarmName] = useState('');
   const [formError, setFormError] = useState('');
 
-  function refresh() {
-    setUsers(getUsers());
+  async function refresh() {
+    const list = await getUsers();
+    setUsers(list);
   }
+
+  useEffect(() => {
+    refresh();
+  }, []);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -54,23 +57,23 @@ export default function AdminPanel({ currentUser, onClose }: Props) {
       setFormError(result.error || 'Erro ao criar usuário.');
       return;
     }
-    refresh();
+    await refresh();
     setShowForm(false);
     setName(''); setEmail(''); setPassword(''); setFarmName(''); setRole('user');
     showToast('Usuário criado com sucesso!');
   }
 
-  function handleToggle(userId: string) {
+  async function handleToggle(userId: string) {
     if (userId === currentUser.id) return;
-    toggleUserActive(userId);
-    refresh();
+    await toggleUserActive(userId);
+    await refresh();
     showToast('Status atualizado.');
   }
 
-  function handleDelete(userId: string) {
+  async function handleDelete(userId: string) {
     if (userId === currentUser.id) return;
-    deleteUser(userId);
-    refresh();
+    await deleteUser(userId);
+    await refresh();
     setConfirmDelete(null);
     showToast('Usuário removido.');
   }

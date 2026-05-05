@@ -4,13 +4,13 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Home, 
-  Milk, 
-  ClipboardList, 
-  Plus, 
-  ChevronRight, 
-  Calendar, 
+import {
+  Home,
+  Milk,
+  ClipboardList,
+  Plus,
+  ChevronRight,
+  Calendar,
   Activity,
   User,
   Search,
@@ -45,18 +45,22 @@ import { HealthPage } from './pages/HealthPage';
 import { ConfigPage } from './pages/ConfigPage';
 import { format, subDays, isSameDay, startOfDay, parseISO, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   AreaChart,
   Area
 } from 'recharts';
 import { Animal, MilkProduction, HealthEvent, FarmConfig } from './types';
+import { animalService } from './services/animals.service';
+import { productionService } from './services/productions.service';
+import { healthService } from './services/health.service';
+import { farmConfigService } from './services/farmConfig.service';
 
 // --- Mock Data ---
 const INITIAL_ANIMALS: Animal[] = [
@@ -103,7 +107,7 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
     name: currentUser.farmName || INITIAL_CONFIG.name,
     producer: currentUser.name,
   });
-  
+
   const [isAddingProduction, setIsAddingProduction] = useState(false);
   const [isAddingAnimal, setIsAddingAnimal] = useState(false);
   const [isAddingEvent, setIsAddingEvent] = useState(false);
@@ -151,17 +155,17 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
   const heiferCount = useMemo(() => animals.filter(a => a.category === 'heifer').length, [animals]);
   const lactationCount = useMemo(() => animals.filter(a => a.status === 'lactation').length, [animals]);
 
-  const selectedAnimal = useMemo(() => 
-    animals.find(a => a.id === selectedAnimalId), 
-  [animals, selectedAnimalId]);
+  const selectedAnimal = useMemo(() =>
+    animals.find(a => a.id === selectedAnimalId),
+    [animals, selectedAnimalId]);
 
-  const selectedAnimalProductions = useMemo(() => 
+  const selectedAnimalProductions = useMemo(() =>
     productions.filter(p => p.animalId === selectedAnimalId),
-  [productions, selectedAnimalId]);
+    [productions, selectedAnimalId]);
 
-  const selectedAnimalEvents = useMemo(() => 
+  const selectedAnimalEvents = useMemo(() =>
     events.filter(e => e.animalId === selectedAnimalId),
-  [events, selectedAnimalId]);
+    [events, selectedAnimalId]);
 
   const chartData = useMemo(() => {
     const last7Days = Array.from({ length: 7 }, (_, i) => subDays(new Date(), 6 - i));
@@ -195,8 +199,7 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
     e.preventDefault();
     if (!newProdAnimalId || !newProdAmount) return;
 
-    const newProd: MilkProduction = {
-      id: Math.random().toString(36).substr(2, 9),
+    const newProdData: Omit<MilkProduction, 'id'> = {
       animalId: newProdAnimalId,
       amount: parseFloat(newProdAmount),
       date: new Date().toISOString(),
@@ -205,12 +208,18 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
       destination: newProdDestination,
       observation: newProdObs
     };
-    setProductions([newProd, ...productions]);
-    setIsAddingProduction(false);
-    setNewProdAnimalId('');
-    setNewProdAmount('');
-    setNewProdObs('');
-    triggerToast();
+
+    productionService.createProduction(newProdData).then(savedProd => {
+      setProductions([savedProd, ...productions]);
+      setIsAddingProduction(false);
+      setNewProdAnimalId('');
+      setNewProdAmount('');
+      setNewProdObs('');
+      triggerToast();
+    }).catch(err => {
+      console.error("Erro ao salvar produção:", err);
+      alert("Erro ao salvar produção no servidor.");
+    });
   };
 
   const handleClearData = () => {
@@ -231,8 +240,7 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
     e.preventDefault();
     if (!newAnimalName || !newAnimalTag) return;
 
-    const newAnimal: Animal = {
-      id: Math.random().toString(36).substr(2, 9),
+    const newAnimalData: Omit<Animal, 'id'> = {
       name: newAnimalName,
       tag: newAnimalTag,
       breed: newAnimalBreed || 'Indefinida',
@@ -245,55 +253,67 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
       expectedCalving: newAnimalExpectedCalving || undefined,
       dryingDate: newAnimalDryingDate || undefined
     };
-    setAnimals([...animals, newAnimal]);
-    setIsAddingAnimal(false);
-    setNewAnimalName('');
-    setNewAnimalTag('');
-    setNewAnimalBreed('');
-    setNewAnimalTarget('');
-    setNewAnimalWeight('');
-    setNewAnimalECC('');
-    setNewAnimalLastCalving('');
-    setNewAnimalExpectedCalving('');
-    setNewAnimalDryingDate('');
-    triggerToast();
+
+    animalService.createAnimal(newAnimalData).then(savedAnimal => {
+      setAnimals([...animals, savedAnimal]);
+      setIsAddingAnimal(false);
+      setNewAnimalName('');
+      setNewAnimalTag('');
+      setNewAnimalBreed('');
+      setNewAnimalTarget('');
+      setNewAnimalWeight('');
+      setNewAnimalECC('');
+      setNewAnimalLastCalving('');
+      setNewAnimalExpectedCalving('');
+      setNewAnimalDryingDate('');
+      triggerToast();
+    }).catch(err => {
+      console.error("Erro ao cadastrar animal:", err);
+      alert("Erro ao salvar animal no servidor.");
+    });
   };
 
   const handleAddEvent = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEventAnimalId || !newEventDesc) return;
 
-    const newEvent: HealthEvent = {
-      id: Math.random().toString(36).substr(2, 9),
+    const newEventData: Omit<HealthEvent, 'id'> = {
       animalId: newEventAnimalId,
       type: newEventType,
       description: newEventDesc,
       date: newEventDate,
-      nextDoseDate: newEventNextDate,
+      nextDoseDate: newEventNextDate || undefined,
       responsible: newEventResp,
       withdrawalDays: parseFloat(newEventWithdrawal) || undefined
     };
-    setEvents([newEvent, ...events]);
-    setIsAddingEvent(false);
-    setNewEventAnimalId('');
-    setNewEventDesc('');
-    setNewEventNextDate('');
-    setNewEventResp('');
-    setNewEventWithdrawal('');
-    triggerToast();
+
+    healthService.createEvent(newEventData).then(savedEvent => {
+      setEvents([savedEvent, ...events]);
+      setIsAddingEvent(false);
+      setNewEventAnimalId('');
+      setNewEventDesc('');
+      setNewEventNextDate('');
+      setNewEventResp('');
+      setNewEventWithdrawal('');
+      triggerToast();
+    }).catch(err => {
+      console.error("Erro ao salvar evento:", err);
+      alert("Erro ao salvar evento no servidor.");
+    });
   };
 
   const alerts = useFarmAlerts(animals, events, config);
 
   const toggleAnimalStatus = (id: string) => {
-    setAnimals(animals.map(a => {
-      if (a.id === id) {
-        const nextStatus: Animal['status'] = a.status === 'lactation' ? 'dry' : 'lactation';
-        return { ...a, status: nextStatus };
-      }
-      return a;
-    }));
-    triggerToast();
+    const animal = animals.find(a => a.id === id);
+    if (!animal) return;
+
+    const nextStatus: Animal['status'] = animal.status === 'lactation' ? 'dry' : 'lactation';
+
+    animalService.updateAnimal(id, { status: nextStatus }).then(updated => {
+      setAnimals(animals.map(a => a.id === id ? updated : a));
+      triggerToast();
+    });
   };
 
   const triggerToast = () => {
@@ -301,38 +321,28 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
     setTimeout(() => setShowToast(false), 3000);
   };
 
-  // Persistence
+  // Carregamento de dados da API
   useEffect(() => {
-    try {
-      const savedAnimals    = localStorage.getItem(userKey(currentUser.id, 'animals'));
-      const savedProductions= localStorage.getItem(userKey(currentUser.id, 'productions'));
-      const savedEvents     = localStorage.getItem(userKey(currentUser.id, 'events'));
-      const savedConfig     = localStorage.getItem(userKey(currentUser.id, 'config'));
+    const loadData = async () => {
+      try {
+        const [animalsData, productionsData, eventsData, configData] = await Promise.all([
+          animalService.getAnimals(),
+          productionService.getProductions(),
+          healthService.getEvents(),
+          farmConfigService.getConfig(),
+        ]);
 
-      if (savedAnimals)     setAnimals(JSON.parse(savedAnimals));
-      if (savedProductions) setProductions(JSON.parse(savedProductions));
-      if (savedEvents)      setEvents(JSON.parse(savedEvents));
-      if (savedConfig)      setConfig(JSON.parse(savedConfig));
-    } catch (error) {
-      console.error("Erro ao carregar dados locais:", error);
-    }
+        setAnimals(animalsData);
+        setProductions(productionsData);
+        setEvents(eventsData);
+        setConfig(configData);
+      } catch (error) {
+        console.error("Erro ao carregar dados da API:", error);
+      }
+    };
+
+    loadData();
   }, [currentUser.id]);
-
-  useEffect(() => {
-    localStorage.setItem(userKey(currentUser.id, 'animals'), JSON.stringify(animals));
-  }, [animals, currentUser.id]);
-
-  useEffect(() => {
-    localStorage.setItem(userKey(currentUser.id, 'productions'), JSON.stringify(productions));
-  }, [productions, currentUser.id]);
-
-  useEffect(() => {
-    localStorage.setItem(userKey(currentUser.id, 'events'), JSON.stringify(events));
-  }, [events, currentUser.id]);
-
-  useEffect(() => {
-    localStorage.setItem(userKey(currentUser.id, 'config'), JSON.stringify(config));
-  }, [config, currentUser.id]);
 
   useEffect(() => {
     if (isAddingProduction && animals.length > 0) {
@@ -385,7 +395,7 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
       <main className="p-4">
         <AnimatePresence mode="wait">
           {selectedAnimalId ? (
-            <motion.div 
+            <motion.div
               key="details"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -397,7 +407,7 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase">Categoria / Raça</p>
                   <p className="font-bold text-lg">
-                    {selectedAnimal?.category === 'cow' ? '🐄 Vaca Leite' : '🐄 Vaca Novilha'} 
+                    {selectedAnimal?.category === 'cow' ? '🐄 Vaca Leite' : '🐄 Vaca Novilha'}
                     {' • '}{selectedAnimal?.breed}
                   </p>
                   <div className="space-y-1 mt-2">
@@ -423,17 +433,16 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
                 </div>
                 <div className="text-right">
                   <p className="text-xs font-bold text-slate-400 uppercase">Status</p>
-                  <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
-                    selectedAnimal?.status === 'lactation' ? 'bg-green-100 text-green-700' :
-                    selectedAnimal?.status === 'pregnant' ? 'bg-blue-100 text-blue-700' :
-                    selectedAnimal?.status === 'dry' ? 'bg-slate-100 text-slate-700' :
-                    selectedAnimal?.status === 'pre-calving' ? 'bg-orange-100 text-orange-700' :
-                    'bg-red-100 text-red-700'
-                  }`}>
+                  <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${selectedAnimal?.status === 'lactation' ? 'bg-green-100 text-green-700' :
+                      selectedAnimal?.status === 'pregnant' ? 'bg-blue-100 text-blue-700' :
+                        selectedAnimal?.status === 'dry' ? 'bg-slate-100 text-slate-700' :
+                          selectedAnimal?.status === 'pre-calving' ? 'bg-orange-100 text-orange-700' :
+                            'bg-red-100 text-red-700'
+                    }`}>
                     {selectedAnimal?.status === 'lactation' ? 'Lactação' :
-                     selectedAnimal?.status === 'pregnant' ? 'Prenha' :
-                     selectedAnimal?.status === 'dry' ? 'Seca' : 
-                     selectedAnimal?.status === 'pre-calving' ? 'Pré-Parto' : 'Doente'}
+                      selectedAnimal?.status === 'pregnant' ? 'Prenha' :
+                        selectedAnimal?.status === 'dry' ? 'Seca' :
+                          selectedAnimal?.status === 'pre-calving' ? 'Pré-Parto' : 'Doente'}
                   </span>
                 </div>
               </Card>
@@ -480,8 +489,8 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
               {/* Actions */}
               <div className="grid grid-cols-2 gap-3">
                 {selectedAnimal?.category === 'cow' && (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => {
                       setNewProdAnimalId(selectedAnimalId!);
                       setIsAddingProduction(true);
@@ -490,7 +499,7 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
                     Lançar Leite
                   </Button>
                 )}
-                <Button 
+                <Button
                   variant={selectedAnimal?.status === 'dry' ? 'primary' : 'secondary'}
                   onClick={() => toggleAnimalStatus(selectedAnimalId!)}
                   className={selectedAnimal?.category !== 'cow' ? 'col-span-2' : ''}
@@ -585,13 +594,13 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
       {/* Modals */}
       <AnimatePresence>
         {isAddingProduction && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
           >
-            <motion.form 
+            <motion.form
               onSubmit={handleAddProduction}
               initial={{ y: 100 }}
               animate={{ y: 0 }}
@@ -608,7 +617,7 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-bold mb-2">Selecione o Animal (Leite)</label>
-                  <select 
+                  <select
                     value={newProdAnimalId}
                     onChange={(e) => setNewProdAnimalId(e.target.value)}
                     className="w-full p-4 bg-slate-50 rounded-xl border-none outline-none font-semibold appearance-none"
@@ -623,8 +632,8 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
 
                 <div>
                   <label className="block text-sm font-bold mb-2">Quantidade (Litros)</label>
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     step="0.1"
                     value={newProdAmount}
                     onChange={(e) => setNewProdAmount(e.target.value)}
@@ -637,7 +646,7 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-bold mb-2">Turno</label>
-                    <select 
+                    <select
                       value={newProdPeriod}
                       onChange={(e) => setNewProdPeriod(e.target.value as any)}
                       className="w-full p-4 bg-slate-50 rounded-xl border-none outline-none font-semibold appearance-none"
@@ -649,7 +658,7 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
                   </div>
                   <div>
                     <label className="block text-sm font-bold mb-2">Destino</label>
-                    <select 
+                    <select
                       value={newProdDestination}
                       onChange={(e) => setNewProdDestination(e.target.value as any)}
                       className="w-full p-4 bg-slate-50 rounded-xl border-none outline-none font-semibold appearance-none"
@@ -664,7 +673,7 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
 
                 <div>
                   <label className="block text-sm font-bold mb-2">Qualidade</label>
-                  <select 
+                  <select
                     value={newProdQuality}
                     onChange={(e) => setNewProdQuality(e.target.value as any)}
                     className="w-full p-4 bg-slate-50 rounded-xl border-none outline-none font-semibold appearance-none"
@@ -677,8 +686,8 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
 
                 <div>
                   <label className="block text-sm font-bold mb-2">Observação (opcional)</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={newProdObs}
                     onChange={(e) => setNewProdObs(e.target.value)}
                     placeholder="Ex: animal agitado"
@@ -696,13 +705,13 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
         )}
 
         {isAddingAnimal && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
           >
-            <motion.form 
+            <motion.form
               onSubmit={handleAddAnimal}
               initial={{ y: 100 }}
               animate={{ y: 0 }}
@@ -728,11 +737,10 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
                         key={cat.id}
                         type="button"
                         onClick={() => setNewAnimalCategory(cat.id as any)}
-                        className={`py-2 rounded-xl text-xs font-bold border-2 transition-all ${
-                          newAnimalCategory === cat.id 
-                            ? 'border-agro-green-600 bg-agro-green-50 text-agro-green-700' 
+                        className={`py-2 rounded-xl text-xs font-bold border-2 transition-all ${newAnimalCategory === cat.id
+                            ? 'border-agro-green-600 bg-agro-green-50 text-agro-green-700'
                             : 'border-slate-100 text-slate-400'
-                        }`}
+                          }`}
                       >
                         {cat.label}
                       </button>
@@ -742,8 +750,8 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
 
                 <div>
                   <label className="block text-sm font-bold mb-2">Nome do Animal</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={newAnimalName}
                     onChange={(e) => setNewAnimalName(e.target.value)}
                     placeholder="Ex: Mimosa"
@@ -755,8 +763,8 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-bold mb-2">Brinco</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={newAnimalTag}
                       onChange={(e) => setNewAnimalTag(e.target.value)}
                       placeholder="000"
@@ -766,8 +774,8 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
                   </div>
                   <div>
                     <label className="block text-sm font-bold mb-2">Raça</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={newAnimalBreed}
                       onChange={(e) => setNewAnimalBreed(e.target.value)}
                       placeholder="Ex: Holandesa"
@@ -779,7 +787,7 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-bold mb-2">Status</label>
-                    <select 
+                    <select
                       value={newAnimalStatus}
                       onChange={(e) => setNewAnimalStatus(e.target.value as any)}
                       className="w-full p-4 bg-slate-50 rounded-xl border-none outline-none font-semibold appearance-none"
@@ -793,8 +801,8 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
                   </div>
                   <div>
                     <label className="block text-sm font-bold mb-2">Meta Diária (L)</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       step="0.1"
                       value={newAnimalTarget}
                       onChange={(e) => setNewAnimalTarget(e.target.value)}
@@ -809,8 +817,8 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold mb-1">Último Parto</label>
-                      <input 
-                        type="date" 
+                      <input
+                        type="date"
                         value={newAnimalLastCalving}
                         onChange={(e) => setNewAnimalLastCalving(e.target.value)}
                         className="w-full p-3 bg-slate-50 rounded-xl border-none outline-none text-xs font-semibold"
@@ -818,8 +826,8 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
                     </div>
                     <div>
                       <label className="block text-xs font-bold mb-1">Previsão Parto</label>
-                      <input 
-                        type="date" 
+                      <input
+                        type="date"
                         value={newAnimalExpectedCalving}
                         onChange={(e) => setNewAnimalExpectedCalving(e.target.value)}
                         className="w-full p-3 bg-slate-50 rounded-xl border-none outline-none text-xs font-semibold"
@@ -828,8 +836,8 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
                   </div>
                   <div>
                     <label className="block text-xs font-bold mb-1">Data Prevista Secagem</label>
-                    <input 
-                      type="date" 
+                    <input
+                      type="date"
                       value={newAnimalDryingDate}
                       onChange={(e) => setNewAnimalDryingDate(e.target.value)}
                       className="w-full p-3 bg-slate-50 rounded-xl border-none outline-none text-xs font-semibold"
@@ -840,8 +848,8 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-bold mb-2">Peso (kg)</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       value={newAnimalWeight}
                       onChange={(e) => setNewAnimalWeight(e.target.value)}
                       placeholder="0"
@@ -850,8 +858,8 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
                   </div>
                   <div>
                     <label className="block text-sm font-bold mb-2">ECC (1-5)</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       step="0.1"
                       min="1"
                       max="5"
@@ -873,13 +881,13 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
         )}
 
         {isAddingEvent && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
           >
-            <motion.form 
+            <motion.form
               onSubmit={handleAddEvent}
               initial={{ y: 100 }}
               animate={{ y: 0 }}
@@ -896,7 +904,7 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-bold mb-2">Animal</label>
-                  <select 
+                  <select
                     value={newEventAnimalId}
                     onChange={(e) => setNewEventAnimalId(e.target.value)}
                     className="w-full p-4 bg-slate-50 rounded-xl border-none outline-none font-semibold appearance-none"
@@ -911,7 +919,7 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
 
                 <div>
                   <label className="block text-sm font-bold mb-2">Tipo de Evento</label>
-                  <select 
+                  <select
                     value={newEventType}
                     onChange={(e) => setNewEventType(e.target.value as any)}
                     className="w-full p-4 bg-slate-50 rounded-xl border-none outline-none font-semibold appearance-none"
@@ -925,8 +933,8 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
 
                 <div>
                   <label className="block text-sm font-bold mb-2">Descrição</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={newEventDesc}
                     onChange={(e) => setNewEventDesc(e.target.value)}
                     placeholder="Ex: Febre Aftosa"
@@ -938,8 +946,8 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-bold mb-2">Data</label>
-                    <input 
-                      type="date" 
+                    <input
+                      type="date"
                       value={newEventDate}
                       onChange={(e) => setNewEventDate(e.target.value)}
                       className="w-full p-4 bg-slate-50 rounded-xl border-none outline-none font-semibold"
@@ -948,8 +956,8 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
                   </div>
                   <div>
                     <label className="block text-sm font-bold mb-2">Próxima Dose</label>
-                    <input 
-                      type="date" 
+                    <input
+                      type="date"
                       value={newEventNextDate}
                       onChange={(e) => setNewEventNextDate(e.target.value)}
                       className="w-full p-4 bg-slate-50 rounded-xl border-none outline-none font-semibold"
@@ -960,8 +968,8 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
                 {newEventType === 'medication' && (
                   <div>
                     <label className="block text-sm font-bold mb-2">Dias de Carência (Leite/Carne)</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       value={newEventWithdrawal}
                       onChange={(e) => setNewEventWithdrawal(e.target.value)}
                       placeholder="0"
@@ -983,13 +991,13 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
       {/* Detail Modal */}
       <AnimatePresence>
         {detailModal && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-end sm:items-center justify-center p-4"
           >
-            <motion.div 
+            <motion.div
               initial={{ y: 100 }}
               animate={{ y: 0 }}
               exit={{ y: 100 }}
@@ -1007,8 +1015,8 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
                   <p className="text-center py-8 text-slate-400 font-medium">Nenhum animal nesta categoria.</p>
                 ) : (
                   detailModal.animals.map(animal => (
-                    <Card 
-                      key={animal.id} 
+                    <Card
+                      key={animal.id}
                       className="flex items-center justify-between active:scale-[0.98] transition-transform cursor-pointer"
                       onClick={() => {
                         setSelectedAnimalId(animal.id);
@@ -1029,7 +1037,7 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
                   ))
                 )}
               </div>
-              
+
               <Button variant="outline" className="w-full" onClick={() => setDetailModal(null)}>Fechar</Button>
             </motion.div>
           </motion.div>
@@ -1039,7 +1047,7 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
       {/* Toast */}
       <AnimatePresence>
         {showToast && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
@@ -1062,35 +1070,35 @@ export default function App({ currentUser, onLogout }: { currentUser: AppUser; o
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-agro-green-100 px-6 py-3 flex justify-between items-center z-40 max-w-md mx-auto shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
-        <button 
+        <button
           onClick={() => setActiveTab('home')}
           className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'home' ? 'text-agro-green-700' : 'text-slate-500'}`}
         >
           <Home size={24} strokeWidth={activeTab === 'home' ? 2.5 : 2} />
           <span className="text-[10px] font-bold uppercase tracking-wider">Início</span>
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab('herd')}
           className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'herd' ? 'text-agro-green-700' : 'text-slate-500'}`}
         >
           <ClipboardList size={24} strokeWidth={activeTab === 'herd' ? 2.5 : 2} />
           <span className="text-[10px] font-bold uppercase tracking-wider">Rebanho</span>
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab('milking')}
           className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'milking' ? 'text-agro-green-700' : 'text-slate-500'}`}
         >
           <Milk size={24} strokeWidth={activeTab === 'milking' ? 2.5 : 2} />
           <span className="text-[10px] font-bold uppercase tracking-wider">Ordenha</span>
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab('health')}
           className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'health' ? 'text-agro-green-700' : 'text-slate-500'}`}
         >
           <Calendar size={24} strokeWidth={activeTab === 'health' ? 2.5 : 2} />
           <span className="text-[10px] font-bold uppercase tracking-wider">Eventos</span>
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab('config')}
           className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'config' ? 'text-agro-green-700' : 'text-slate-500'}`}
         >

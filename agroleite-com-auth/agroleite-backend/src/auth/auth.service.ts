@@ -16,6 +16,9 @@ export class AuthService {
     });
     
     if (user) {
+      if (!user.active) {
+        throw new UnauthorizedException('Conta bloqueada. Entre em contato com o administrador.');
+      }
       const isMatch = await bcrypt.compare(pass, user.password);
       if (isMatch) {
         const { password, ...result } = user;

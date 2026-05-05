@@ -10,13 +10,9 @@ export async function login(
 ): Promise<{ success: boolean; user?: AppUser; error?: string }> {
   try {
     const response = await api.post('/auth/login', { email, password });
-
     const { access_token, user } = response.data;
-
-    // Salvar token e dados do usuário logado
     localStorage.setItem(TOKEN_KEY, access_token);
     localStorage.setItem(USER_KEY, JSON.stringify(user));
-
     return { success: true, user };
   } catch (error: any) {
     console.error('Erro na requisição de login:', error);
@@ -30,12 +26,9 @@ export async function login(
 export function getCurrentUser(): AppUser | null {
   const token = localStorage.getItem(TOKEN_KEY);
   const userRaw = localStorage.getItem(USER_KEY);
-  
   if (!token || !userRaw) return null;
-
   try {
-    const user = JSON.parse(userRaw) as AppUser;
-    return user;
+    return JSON.parse(userRaw) as AppUser;
   } catch {
     return null;
   }
@@ -50,13 +43,16 @@ export function userKey(userId: string, key: string): string {
   return `agro_${userId}_${key}`;
 }
 
-export async function initAuth(): Promise<void> {
-  // Inicialização pode ser vazia
-}
+export async function initAuth(): Promise<void> {}
 
-export function getUsers(): AppUser[] {
-  // Retorna array vazio ou mock para não quebrar a tela de AdminPanel
-  return [];
+/** Busca todos os usuários do backend (somente admin) */
+export async function getUsers(): Promise<AppUser[]> {
+  try {
+    const response = await api.get('/admin/users');
+    return response.data;
+  } catch {
+    return [];
+  }
 }
 
 export async function createUser(params: {
@@ -75,17 +71,28 @@ export async function createUser(params: {
   }
 }
 
-export function toggleUserActive(userId: string): void {
-  // Fictício
+/** Alterna o status active de um usuário */
+export async function toggleUserActive(userId: string): Promise<void> {
+  try {
+    await api.patch(`/admin/users/${userId}/toggle`);
+  } catch (error: any) {
+    console.error('Erro ao alternar status:', error);
+  }
 }
 
-export function deleteUser(userId: string): void {
-  // Fictício
+/** Remove um usuário */
+export async function deleteUser(userId: string): Promise<void> {
+  try {
+    await api.delete(`/admin/users/${userId}`);
+  } catch (error: any) {
+    console.error('Erro ao remover usuário:', error);
+  }
 }
 
 export async function changePassword(
   userId: string,
   newPassword: string
 ): Promise<void> {
-  // Fictício
+  // Implementar se necessário
 }
+

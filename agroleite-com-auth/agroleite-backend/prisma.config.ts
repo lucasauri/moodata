@@ -1,5 +1,5 @@
-// Prisma configuration with shadow database support
-import "dotenv/config";
+// prisma.config.ts – versão final garantida
+import "dotenv/config";                     // << IMPORTA .env imediatamente
 import { defineConfig, env } from "prisma/config";
 
 export default defineConfig({
@@ -10,8 +10,7 @@ export default defineConfig({
   engine: "classic",
   datasource: {
     url: env("DATABASE_URL"),
-    // Use a separate shadow DB for migrations (required when the main user
-    // cannot CREATE DATABASE). Set SHADOW_DATABASE_URL in .env.
+    // Esta linha usa a variável SHADOW_DATABASE_URL que já está no .env
     shadowDatabaseUrl: env("SHADOW_DATABASE_URL"),
   },
 });
