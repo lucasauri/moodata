@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Activity, Milk, AlertTriangle, DollarSign, ArrowUpRight, ArrowDownLeft, ClipboardList, Check, TrendingUp, Info, Calendar, Plus } from 'lucide-react';
+import { Activity, Milk, AlertTriangle, ClipboardList, Check, TrendingUp, Info, Calendar, Plus } from 'lucide-react';
 import { format, parseISO, isSameDay, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -83,36 +83,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           <AlertTriangle className="absolute -right-2 -bottom-2 text-white/20" size={70} />
         </Card>
 
-        {/* Cash Flow Summary */}
-        <Card className="col-span-2 bg-white border-agro-green-100 shadow-sm p-4">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold text-slate-700 flex items-center gap-2">
-              <DollarSign size={18} className="text-agro-green-600" />
-              Fluxo de Caixa
-            </h3>
-            <span className="text-[10px] font-bold text-slate-400 uppercase">Este Mês</span>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600">
-                <ArrowUpRight size={20} />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Receitas</p>
-                <p className="font-bold text-green-600">R$ 12.450</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-600">
-                <ArrowDownLeft size={20} />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Despesas</p>
-                <p className="font-bold text-red-600">R$ 8.200</p>
-              </div>
-            </div>
-          </div>
-        </Card>
+
       </div>
 
       {/* Today's Tasks */}
@@ -130,7 +101,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           {events.filter(e => isSameDay(parseISO(e.date), new Date())).map(task => {
             const animal = animals.find(a => a.id === task.animalId);
             return (
-              <Card key={task.id} className="flex items-center gap-4 border-l-4 border-l-agro-green-600">
+              <Card key={task.id} className="flex items-center gap-4 border-l-4 border-l-agro-green-500 border-t-white/50 border-r-white/50 border-b-white/50">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                   task.type === 'vaccine' ? 'bg-red-50 text-red-600' : 
                   task.type === 'insemination' ? 'bg-purple-50 text-purple-600' :
@@ -237,24 +208,24 @@ export const HomePage: React.FC<HomePageProps> = ({
           <Plus size={18} className="text-agro-green-600" />
           Ações Rápidas
         </h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-4">
           <button 
             onClick={() => setIsAddingProduction(true)}
-            className="p-4 bg-white rounded-2xl border border-agro-green-100 shadow-sm flex flex-col items-center gap-2 active:scale-95 transition-transform"
+            className="p-5 bg-white rounded-[24px] border border-white/50 shadow-[0_8px_30px_-10px_rgba(0,0,0,0.08)] flex flex-col items-center gap-3 active:scale-95 transition-transform"
           >
-            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-              <Milk size={24} />
+            <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+              <Milk size={28} />
             </div>
-            <span className="font-semibold text-sm">Lançar Leite</span>
+            <span className="font-bold text-sm text-slate-700">Lançar Leite</span>
           </button>
           <button 
             onClick={() => setIsAddingAnimal(true)}
-            className="p-4 bg-white rounded-2xl border border-agro-green-100 shadow-sm flex flex-col items-center gap-2 active:scale-95 transition-transform"
+            className="p-5 bg-white rounded-[24px] border border-white/50 shadow-[0_8px_30px_-10px_rgba(0,0,0,0.08)] flex flex-col items-center gap-3 active:scale-95 transition-transform"
           >
-            <div className="w-12 h-12 rounded-full bg-agro-green-50 flex items-center justify-center text-agro-green-600">
-              <Plus size={24} />
+            <div className="w-14 h-14 rounded-full bg-agro-green-50 flex items-center justify-center text-agro-green-600">
+              <Plus size={28} />
             </div>
-            <span className="font-semibold text-sm">Novo Animal</span>
+            <span className="font-bold text-sm text-slate-700">Novo Animal</span>
           </button>
         </div>
       </section>

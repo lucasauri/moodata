@@ -4,6 +4,7 @@ import { Plus, Search, X, ChevronRight } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { StatusBadge } from '../components/ui/StatusBadge';
 import { Animal } from '../types';
 
 interface HerdPageProps {
@@ -49,7 +50,7 @@ export const HerdPage: React.FC<HerdPageProps> = ({
       className="space-y-4"
     >
       <div className="flex justify-between items-center mb-2">
-        <h2 className="text-xl font-bold">Meu Rebanho</h2>
+        <h2 className="text-2xl font-extrabold text-agro-green-700 tracking-tight">Meu Rebanho</h2>
         <Button variant="ghost" className="p-2" onClick={() => setIsAddingAnimal(true)}>
           <Plus size={20} />
         </Button>
@@ -84,7 +85,7 @@ export const HerdPage: React.FC<HerdPageProps> = ({
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Buscar por nome ou brinco..."
-          className="w-full pl-10 pr-4 py-3 bg-white rounded-xl border border-agro-green-100 focus:ring-2 focus:ring-agro-green-600 outline-none"
+          className="w-full pl-10 pr-4 py-4 bg-white rounded-[20px] shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border border-white/50 focus:ring-2 focus:ring-agro-green-600 outline-none transition-all"
         />
         {searchTerm && (
           <button 
@@ -125,18 +126,7 @@ export const HerdPage: React.FC<HerdPageProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
-                animal.status === 'lactation' ? 'bg-green-100 text-green-700' :
-                animal.status === 'pregnant' ? 'bg-blue-100 text-blue-700' :
-                animal.status === 'dry' ? 'bg-slate-100 text-slate-700' :
-                animal.status === 'pre-calving' ? 'bg-orange-100 text-orange-700' :
-                'bg-red-100 text-red-700'
-              }`}>
-                {animal.status === 'lactation' ? 'Lactação' :
-                 animal.status === 'pregnant' ? 'Prenha' :
-                 animal.status === 'dry' ? 'Seca' : 
-                 animal.status === 'pre-calving' ? 'Pré-Parto' : 'Doente'}
-              </span>
+              <StatusBadge status={animal.status} />
               <ChevronRight size={18} className="text-slate-300" />
             </div>
           </Card>

@@ -39,10 +39,6 @@ export function logout(): void {
   localStorage.removeItem(USER_KEY);
 }
 
-export function userKey(userId: string, key: string): string {
-  return `agro_${userId}_${key}`;
-}
-
 
 /** Busca todos os usuários do backend (somente admin) */
 export async function getUsers(): Promise<AppUser[]> {

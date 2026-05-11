@@ -34,7 +34,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
       exit={{ opacity: 0, x: -20 }}
       className="space-y-6"
     >
-      <h2 className="text-xl font-bold">Configurações</h2>
+      <h2 className="text-2xl font-extrabold text-agro-green-700 tracking-tight">Configurações</h2>
       
       <Card className="space-y-4">
         <h3 className="font-bold text-agro-green-700 border-b border-agro-green-100 pb-2">Minha Fazenda</h3>
@@ -110,12 +110,16 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
             <p className="text-xl font-bold">{productionsCount}</p>
           </div>
         </div>
-        <Button variant="outline" className="w-full" onClick={onClearData}>Limpar Dados</Button>
+        <Button variant="outline" className="w-full text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600" onClick={() => {
+          if (confirm('ATENÇÃO: Se continuar vai apagar todos os dados! Deseja realmente prosseguir?')) {
+            onClearData();
+          }
+        }}>Limpar Dados</Button>
       </Card>
 
       <div className="text-center py-4">
-        <p className="text-xs text-slate-400">AgroLeite v1.1 · {currentUser.name}</p>
-        <p className="text-[10px] text-slate-300">{currentUser.email}</p>
+        <p className="text-xs text-slate-400 font-bold">MooData v1.1 · {currentUser.name}</p>
+        <p className="text-[10px] text-slate-400">{currentUser.email}</p>
       </div>
 
       {/* Admin — gerenciar usuários */}

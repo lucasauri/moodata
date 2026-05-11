@@ -13,8 +13,8 @@ export default defineConfig(({mode}) => {
       VitePWA({
         registerType: 'autoUpdate',
         manifest: {
-          name: 'AgroLeite',
-          short_name: 'AgroLeite',
+          name: 'MooData',
+          short_name: 'MooData',
           theme_color: '#059669',
           icons: [
             {

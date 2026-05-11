@@ -29,7 +29,7 @@ export const MilkingPage: React.FC<MilkingPageProps> = ({
       className="space-y-4"
     >
       <div className="flex justify-between items-center mb-2">
-        <h2 className="text-xl font-bold">Histórico de Ordenha</h2>
+        <h2 className="text-2xl font-extrabold text-agro-green-700 tracking-tight">Histórico de Ordenha</h2>
         <Button variant="ghost" className="p-2" onClick={() => setIsAddingProduction(true)}>
           <Plus size={20} />
         </Button>

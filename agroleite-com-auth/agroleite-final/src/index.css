@@ -5,16 +5,17 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Cormorant Garamond", serif;
 
-  --color-agro-green-50: #f0fdf4;
-  --color-agro-green-100: #dcfce7;
-  --color-agro-green-500: #22c55e;
-  --color-agro-green-600: #16a34a;
-  --color-agro-green-700: #15803d;
-  --color-agro-earth: #78350f;
+  --color-agro-green-50: #E5F3EB;
+  --color-agro-green-100: #C3E4D1;
+  --color-agro-green-300: #88C6A5;
+  --color-agro-green-500: #168B5C;
+  --color-agro-green-600: #0D5D3F;
+  --color-agro-green-700: #083F2B;
+  --color-agro-earth: #6E4628;
 }
 
 body {
-  @apply bg-agro-green-50 text-slate-900 font-sans antialiased;
+  @apply bg-[#f4f7f5] text-slate-800 font-sans antialiased;
   -webkit-tap-highlight-color: transparent;
 }
 

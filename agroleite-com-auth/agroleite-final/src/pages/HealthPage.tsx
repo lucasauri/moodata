@@ -26,7 +26,7 @@ export const HealthPage: React.FC<HealthPageProps> = ({
       className="space-y-4"
     >
       <div className="flex justify-between items-center mb-2">
-        <h2 className="text-xl font-bold">Eventos do Rebanho</h2>
+        <h2 className="text-2xl font-extrabold text-agro-green-700 tracking-tight">Eventos do Rebanho</h2>
         <Button variant="ghost" className="p-2" onClick={() => setIsAddingEvent(true)}>
           <Plus size={20} />
         </Button>
