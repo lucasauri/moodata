@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateProductionDto } from './dto/create-production.dto';
 
 @Injectable()
 export class ProductionsService {
@@ -13,15 +14,24 @@ export class ProductionsService {
     });
   }
 
-  async create(userId: string, data: any) {
-    const productionDate = data.date ? new Date(data.date) : new Date();
-    const amount = parseFloat(data.amount) || 0;
+  async create(userId: string, data: CreateProductionDto) {
+    // Verificar se o animal pertence ao usuário logado (segurança multi-tenant)
+    const animal = await this.prisma.animal.findFirst({
+      where: { id: data.animalId, userId },
+    });
+    if (!animal) {
+      throw new NotFoundException('Animal não encontrado para este usuário.');
+    }
 
     return this.prisma.milkProduction.create({
       data: {
-        ...data,
-        amount,
-        date: productionDate,
+        animalId: data.animalId,
+        amount: data.amount,
+        date: data.date ? new Date(data.date) : new Date(),
+        period: data.period,
+        quality: data.quality,
+        destination: data.destination,
+        observation: data.observation ?? null,
         userId,
       },
     });

@@ -56,8 +56,8 @@ export function useFarmData(userId: string, userName: string, farmName?: string)
       .reduce((acc, curr) => acc + curr.amount, 0);
   }, [productions]);
 
-  const cowCount = useMemo(() => animals.filter(a => a.category === 'cow').length, [animals]);
-  const heiferCount = useMemo(() => animals.filter(a => a.category === 'heifer').length, [animals]);
+  const cowCount = useMemo(() => animals.filter(a => a.category === 'cow' && a.status !== 'dead').length, [animals]);
+  const heiferCount = useMemo(() => animals.filter(a => a.category === 'heifer' && a.status !== 'dead').length, [animals]);
   const lactationCount = useMemo(() => animals.filter(a => a.status === 'lactation').length, [animals]);
 
   const chartData = useMemo(() => {
@@ -105,9 +105,17 @@ export function useFarmData(userId: string, userName: string, farmName?: string)
     setProductions(prev => [saved, ...prev]);
   }, []);
 
+  const addMultipleProductions = useCallback(async (dataArray: Omit<MilkProduction, 'id'>[]) => {
+    const savedArray = await Promise.all(dataArray.map(data => productionService.createProduction(data)));
+    setProductions(prev => [...savedArray, ...prev]);
+  }, []);
+
   const addEvent = useCallback(async (data: Omit<HealthEvent, 'id'>) => {
     const saved = await healthService.createEvent(data);
     setEvents(prev => [saved, ...prev]);
+    if (data.type === 'death') {
+      setAnimals(prev => prev.map(a => a.id === data.animalId ? { ...a, status: 'dead' } : a));
+    }
   }, []);
 
   const toggleAnimalStatus = useCallback(async (id: string) => {
@@ -118,10 +126,23 @@ export function useFarmData(userId: string, userName: string, farmName?: string)
     setAnimals(prev => prev.map(a => a.id === id ? updated : a));
   }, [animals]);
 
-  const updateConfig = useCallback((newConfig: FarmConfig) => {
+  const updateAnimal = useCallback(async (id: string, data: Partial<Animal>) => {
+    const updated = await animalService.updateAnimal(id, data);
+    setAnimals(prev => prev.map(a => a.id === id ? updated : a));
+  }, []);
+
+  const deleteAnimal = useCallback(async (id: string) => {
+    await animalService.deleteAnimal(id);
+    setAnimals(prev => prev.filter(a => a.id !== id));
+  }, []);
+
+  const updateConfig = useCallback(async (newConfig: FarmConfig) => {
     setConfig(newConfig);
-    // Optionally save to API:
-    // farmConfigService.updateConfig(newConfig);
+    try {
+      await farmConfigService.updateConfig(newConfig);
+    } catch (error) {
+      console.error('Erro ao salvar configurações na API:', error);
+    }
   }, []);
 
   return {
@@ -147,9 +168,11 @@ export function useFarmData(userId: string, userName: string, farmName?: string)
     // Actions
     addAnimal,
     addProduction,
+    addMultipleProductions,
     addEvent,
     toggleAnimalStatus,
+    updateAnimal,
+    deleteAnimal,
     updateConfig,
     setConfig,
-  };
-}
+  };}

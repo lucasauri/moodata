@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Calendar, Milk, Activity, TrendingUp } from 'lucide-react';
+import { Calendar, Milk, Activity, TrendingUp, Edit, Trash2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -16,10 +16,12 @@ interface AnimalDetailPageProps {
   chartData: { name: string; total: number }[];
   onAddProduction: () => void;
   onToggleStatus: () => void;
+  onEditAnimal: () => void;
+  onDeleteAnimal: () => void;
 }
 
 export const AnimalDetailPage: React.FC<AnimalDetailPageProps> = ({
-  animal, productions, events, chartData, onAddProduction, onToggleStatus
+  animal, productions, events, chartData, onAddProduction, onToggleStatus, onEditAnimal, onDeleteAnimal
 }) => {
   return (
     <motion.div
@@ -110,12 +112,20 @@ export const AnimalDetailPage: React.FC<AnimalDetailPageProps> = ({
             Lançar Leite
           </Button>
         )}
-        <Button
-          variant={animal.status === 'dry' ? 'primary' : 'secondary'}
-          onClick={onToggleStatus}
-          className={animal.category !== 'cow' ? 'col-span-2' : ''}
-        >
-          {animal.status === 'dry' ? 'Ativar' : 'Alterar Status'}
+        {animal.status !== 'dead' && (
+          <Button
+            variant={animal.status === 'dry' ? 'primary' : 'secondary'}
+            onClick={onToggleStatus}
+            className={animal.category !== 'cow' ? 'col-span-2' : ''}
+          >
+            {animal.status === 'dry' ? 'Ativar' : 'Alterar Status'}
+          </Button>
+        )}
+        <Button variant="secondary" onClick={onEditAnimal} className="col-span-1 flex justify-center items-center gap-2">
+          <Edit size={18} /> Editar
+        </Button>
+        <Button variant="outline" onClick={onDeleteAnimal} className="col-span-1 flex justify-center items-center gap-2 text-red-500 hover:bg-red-50 border-red-200">
+          <Trash2 size={18} /> Excluir
         </Button>
       </div>
 

@@ -1,6 +1,7 @@
 import { Controller, Get, Put, Body, UseGuards, Request } from '@nestjs/common';
 import { FarmConfigService } from './farm-config.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { UpdateFarmConfigDto } from './dto/update-farm-config.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('farm-config')
@@ -13,7 +14,8 @@ export class FarmConfigController {
   }
 
   @Put()
-  update(@Request() req: any, @Body() body: any) {
+  update(@Request() req: any, @Body() body: UpdateFarmConfigDto) {
     return this.farmConfigService.update(req.user.sub, body);
   }
 }
+

@@ -10,11 +10,12 @@ interface AddProductionModalProps {
   onClose: () => void;
   animals: Animal[];
   onSave: (data: Omit<MilkProduction, 'id'>) => Promise<void>;
+  onSaveMultiple?: (dataArray: Omit<MilkProduction, 'id'>[]) => Promise<void>;
   preselectedAnimalId?: string;
 }
 
 export const AddProductionModal: React.FC<AddProductionModalProps> = ({
-  isOpen, onClose, animals, onSave, preselectedAnimalId
+  isOpen, onClose, animals, onSave, onSaveMultiple, preselectedAnimalId
 }) => {
   const [animalId, setAnimalId] = useState('');
   const [amount, setAmount] = useState('');
@@ -23,19 +24,20 @@ export const AddProductionModal: React.FC<AddProductionModalProps> = ({
   const [destination, setDestination] = useState<MilkProduction['destination']>('tank');
   const [observation, setObservation] = useState('');
 
+  const lactatingAnimals = animals.filter(a => a.status === 'lactation');
+
   useEffect(() => {
     if (isOpen) {
       if (preselectedAnimalId) {
         setAnimalId(preselectedAnimalId);
       } else {
-        const firstLactation = animals.find(a => a.status === 'lactation');
-        if (firstLactation) setAnimalId(firstLactation.id);
+        setAnimalId('ALL_HERD');
       }
     }
   }, [isOpen, animals, preselectedAnimalId]);
 
   const resetForm = () => {
-    setAnimalId('');
+    setAnimalId('ALL_HERD');
     setAmount('');
     setPeriod('morning');
     setQuality('good');
@@ -48,15 +50,34 @@ export const AddProductionModal: React.FC<AddProductionModalProps> = ({
     if (!animalId || !amount) return;
 
     try {
-      await onSave({
-        animalId,
-        amount: parseFloat(amount),
-        date: new Date().toISOString(),
-        period,
-        quality,
-        destination,
-        observation,
-      });
+      const parsedAmount = parseFloat(amount);
+      if (animalId === 'ALL_HERD' && onSaveMultiple) {
+        if (lactatingAnimals.length === 0) {
+          alert('Não há animais em lactação no rebanho.');
+          return;
+        }
+        const amountPerCow = parsedAmount / lactatingAnimals.length;
+        const productions = lactatingAnimals.map(a => ({
+          animalId: a.id,
+          amount: amountPerCow,
+          date: new Date().toISOString(),
+          period,
+          quality,
+          destination,
+          observation,
+        }));
+        await onSaveMultiple(productions);
+      } else {
+        await onSave({
+          animalId,
+          amount: parsedAmount,
+          date: new Date().toISOString(),
+          period,
+          quality,
+          destination,
+          observation,
+        });
+      }
       resetForm();
       onClose();
     } catch (err) {
@@ -65,16 +86,17 @@ export const AddProductionModal: React.FC<AddProductionModalProps> = ({
     }
   };
 
-  const lactatingAnimals = animals
-    .filter(a => a.status === 'lactation')
-    .map(a => ({ value: a.id, label: `${a.name} (${a.tag})` }));
+  const animalOptions = [
+    { value: 'ALL_HERD', label: '🐄 Todo o Rebanho (Dividir Média)' },
+    ...lactatingAnimals.map(a => ({ value: a.id, label: `${a.name} (${a.tag})` }))
+  ];
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Lançar Produção">
       <form onSubmit={handleSubmit} className="space-y-4">
         <Select
           label="Selecione o Animal (Leite)"
-          options={lactatingAnimals}
+          options={animalOptions}
           value={animalId}
           onChange={setAnimalId}
           placeholder="Selecione o animal..."
@@ -99,6 +121,7 @@ export const AddProductionModal: React.FC<AddProductionModalProps> = ({
               { value: 'morning', label: '🌅 Manhã' },
               { value: 'afternoon', label: '☀️ Tarde' },
               { value: 'night', label: '🌙 Noite' },
+              { value: 'allday', label: '⏳ Dia Todo' },
             ]}
             value={period}
             onChange={v => setPeriod(v as MilkProduction['period'])}

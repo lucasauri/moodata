@@ -4,11 +4,6 @@ import './index.css';
 import App from './App';
 import LoginScreen from './LoginScreen';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { registerSW } from 'virtual:pwa-register';
-
-if ('serviceWorker' in navigator) {
-  registerSW({ immediate: true });
-}
 
 function MainApp() {
   const { user, isLoading, login, logout } = useAuth();

@@ -4,9 +4,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export const TOKEN_KEY = '@agro_jwt_token';
 
 const api = axios.create({
-  // IMPORTANTE: Este é o IP da sua máquina na rede Wi-Fi. 
-  // Emuladores ou celulares reais não acessam o backend via 'localhost'.
-  baseURL: 'http://192.168.53.68:3001',
+  // Configure EXPO_PUBLIC_API_URL no arquivo .env do projeto mobile.
+  // Exemplo: EXPO_PUBLIC_API_URL=http://192.168.1.100:3000
+  // No emulador Android, 10.0.2.2 é o alias do localhost do PC host.
+  // Em dispositivo físico, defina EXPO_PUBLIC_API_URL no arquivo .env
+  baseURL: process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:3000',
   headers: {
     'Content-Type': 'application/json',
   },

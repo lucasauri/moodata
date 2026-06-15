@@ -1,6 +1,5 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 import {defineConfig, loadEnv} from 'vite';
 
@@ -9,27 +8,7 @@ export default defineConfig(({mode}) => {
   return {
     plugins: [
       react(), 
-      tailwindcss(),
-      VitePWA({
-        registerType: 'autoUpdate',
-        manifest: {
-          name: 'MooData',
-          short_name: 'MooData',
-          theme_color: '#059669',
-          icons: [
-            {
-              src: 'pwa-192x192.png',
-              sizes: '192x192',
-              type: 'image/png'
-            },
-            {
-              src: 'pwa-512x512.png',
-              sizes: '512x512',
-              type: 'image/png'
-            }
-          ]
-        }
-      })
+      tailwindcss()
     ],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),

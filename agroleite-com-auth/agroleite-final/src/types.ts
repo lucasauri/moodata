@@ -5,7 +5,7 @@ export interface Animal {
   breed: string;
   birthDate?: string;
   category: 'cow' | 'heifer';
-  status: 'lactation' | 'dry' | 'pregnant' | 'sick' | 'pre-calving';
+  status: 'lactation' | 'dry' | 'pregnant' | 'sick' | 'pre-calving' | 'dead';
   dailyTarget?: number;
   weight?: number;
   ecc?: number;
@@ -20,7 +20,7 @@ export interface MilkProduction {
   animalId: string;
   date: string;
   amount: number;
-  period: 'morning' | 'afternoon' | 'night';
+  period: 'morning' | 'afternoon' | 'night' | 'allday';
   quality: 'good' | 'regular' | 'low';
   destination: 'tank' | 'calves' | 'internal' | 'disposal';
   observation?: string;
@@ -31,7 +31,7 @@ export interface HealthEvent {
   animalId: string;
   date: string;
   nextDoseDate?: string;
-  type: 'vaccine' | 'medication' | 'insemination' | 'checkup' | 'calving';
+  type: 'vaccine' | 'medication' | 'insemination' | 'checkup' | 'calving' | 'birth' | 'purchase' | 'death';
   description: string;
   responsible?: string;
   withdrawalDays?: number;

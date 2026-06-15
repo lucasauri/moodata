@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateAnimalDto } from './dto/create-animal.dto';
+import { UpdateAnimalDto } from './dto/update-animal.dto';
 
 @Injectable()
 export class AnimalsService {
@@ -12,50 +14,48 @@ export class AnimalsService {
     });
   }
 
-  async create(userId: string, data: any) {
-    const formattedData = this.formatAnimalData(data);
+  async create(userId: string, data: CreateAnimalDto) {
     return this.prisma.animal.create({
-      data: { ...formattedData, userId },
+      data: {
+        name: data.name,
+        tag: data.tag,
+        breed: data.breed,
+        category: data.category,
+        status: data.status,
+        dailyTarget: data.dailyTarget ?? 0,
+        weight: data.weight ?? null,
+        ecc: data.ecc ?? null,
+        birthDate: data.birthDate ? new Date(data.birthDate) : null,
+        lastInsemination: data.lastInsemination ? new Date(data.lastInsemination) : null,
+        lastCalving: data.lastCalving ? new Date(data.lastCalving) : null,
+        expectedCalving: data.expectedCalving ? new Date(data.expectedCalving) : null,
+        dryingDate: data.dryingDate ? new Date(data.dryingDate) : null,
+        userId,
+      },
     });
   }
 
-  async update(userId: string, id: string, data: any) {
+  async update(userId: string, id: string, data: UpdateAnimalDto) {
     await this.ensureOwnership(userId, id);
-    const formattedData = this.formatAnimalData(data);
+
     return this.prisma.animal.update({
       where: { id },
-      data: formattedData,
+      data: {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.tag !== undefined && { tag: data.tag }),
+        ...(data.breed !== undefined && { breed: data.breed }),
+        ...(data.category !== undefined && { category: data.category }),
+        ...(data.status !== undefined && { status: data.status }),
+        ...(data.dailyTarget !== undefined && { dailyTarget: data.dailyTarget }),
+        ...(data.weight !== undefined && { weight: data.weight ?? null }),
+        ...(data.ecc !== undefined && { ecc: data.ecc ?? null }),
+        ...(data.birthDate !== undefined && { birthDate: data.birthDate ? new Date(data.birthDate) : null }),
+        ...(data.lastInsemination !== undefined && { lastInsemination: data.lastInsemination ? new Date(data.lastInsemination) : null }),
+        ...(data.lastCalving !== undefined && { lastCalving: data.lastCalving ? new Date(data.lastCalving) : null }),
+        ...(data.expectedCalving !== undefined && { expectedCalving: data.expectedCalving ? new Date(data.expectedCalving) : null }),
+        ...(data.dryingDate !== undefined && { dryingDate: data.dryingDate ? new Date(data.dryingDate) : null }),
+      },
     });
-  }
-
-  private formatAnimalData(data: any) {
-    const formatted = { ...data };
-
-    // Converter datas de string para Date
-    const dateFields = [
-      'birthDate',
-      'lastInsemination',
-      'lastCalving',
-      'expectedCalving',
-      'dryingDate',
-    ];
-    dateFields.forEach((field) => {
-      if (formatted[field]) {
-        formatted[field] = new Date(formatted[field]);
-      } else {
-        delete formatted[field]; // Se for vazio/null, deixa o Prisma tratar como nulo ou não atualizar
-      }
-    });
-
-    // Garantir que números sejam números e não NaN
-    if (formatted.dailyTarget !== undefined)
-      formatted.dailyTarget = parseFloat(formatted.dailyTarget) || 0;
-    if (formatted.weight !== undefined)
-      formatted.weight = formatted.weight ? parseFloat(formatted.weight) : null;
-    if (formatted.ecc !== undefined)
-      formatted.ecc = formatted.ecc ? parseFloat(formatted.ecc) : null;
-
-    return formatted;
   }
 
   async remove(userId: string, id: string) {

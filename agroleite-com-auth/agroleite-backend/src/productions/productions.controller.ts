@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ProductionsService } from './productions.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CreateProductionDto } from './dto/create-production.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('productions')
@@ -22,7 +23,7 @@ export class ProductionsController {
   }
 
   @Post()
-  create(@Request() req: any, @Body() body: any) {
+  create(@Request() req: any, @Body() body: CreateProductionDto) {
     return this.productionsService.create(req.user.sub, body);
   }
 
@@ -31,3 +32,4 @@ export class ProductionsController {
     return this.productionsService.remove(req.user.sub, id);
   }
 }
+

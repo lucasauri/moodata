@@ -1,30 +1,55 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import {
+  View, Text, FlatList, StyleSheet, ActivityIndicator,
+  TouchableOpacity, RefreshControl, TextInput,
+} from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { Menu } from 'lucide-react-native';
 import { animalsService } from '../services/animals.service';
 import { Animal } from '../types';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { TOKEN_KEY } from '../services/api';
 
 interface Props {
-  onLogout: () => void;
+  navigation: any;
+  route: any;
 }
 
-export default function HerdScreen({ onLogout }: Props) {
+export default function HerdScreen({ navigation, route }: Props) {
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [offlineMode, setOfflineMode] = useState(false);
+  const [search, setSearch] = useState('');
+
+  // Filtros vindos do Dashboard via params
+  const [filterCategory, setFilterCategory] = useState<'cow' | 'heifer' | null>(null);
+  const [filterStatus, setFilterStatus] = useState<Animal['status'] | null>(null);
+
+  // Infinite scroll
+  const [visibleCount, setVisibleCount] = useState(10);
+
+  // Aplica filtros recebidos via rota (ex: ao clicar no chip do Dashboard)
+  useFocusEffect(
+    useCallback(() => {
+      const params = route?.params ?? {};
+      if (params.filterCategory !== undefined) {
+        setFilterCategory(params.filterCategory ?? null);
+        setFilterStatus(null);
+        setVisibleCount(10);
+        navigation.setParams({ filterCategory: undefined });
+      }
+      if (params.filterStatus !== undefined) {
+        setFilterStatus(params.filterStatus ?? null);
+        setFilterCategory(null);
+        setVisibleCount(10);
+        navigation.setParams({ filterStatus: undefined });
+      }
+    }, [route?.params])
+  );
 
   const loadAnimals = async () => {
     try {
       const data = await animalsService.getAnimals();
-      // O animalsService cuida de tentar a API ou o Cache Offline
       setAnimals(data);
-      // Aqui teríamos que deduzir se veio do cache ou da API. 
-      // Por simplicidade, vamos assumir que não deu erro = online ou cache bem sucedido.
-      setOfflineMode(false);
     } catch (error: any) {
-      // Como o AsyncStorage funcionou, se der erro aqui, é porque não há nem internet nem cache!
       console.warn(error);
     } finally {
       setLoading(false);
@@ -32,41 +57,96 @@ export default function HerdScreen({ onLogout }: Props) {
     }
   };
 
-  useEffect(() => {
-    loadAnimals();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadAnimals();
+    }, [])
+  );
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadAnimals();
+  const onRefresh = () => { setRefreshing(true); loadAnimals(); };
+
+  const clearFilter = () => {
+    setFilterCategory(null);
+    setFilterStatus(null);
+    setVisibleCount(10);
   };
 
-  const handleLogout = async () => {
-    await AsyncStorage.removeItem(TOKEN_KEY);
-    onLogout();
+  const filtered = animals.filter(a => {
+    // Filtro de busca textual
+    const q = search.toLowerCase();
+    const matchSearch = !q || (
+      a.name?.toLowerCase().includes(q) ||
+      a.tag.toLowerCase().includes(q) ||
+      a.breed.toLowerCase().includes(q)
+    );
+    // Filtro de categoria (vaca/novilha)
+    const matchCategory = !filterCategory || a.category === filterCategory;
+    // Filtro de status (lactação, etc.)
+    const matchStatus = !filterStatus || a.status === filterStatus;
+    // Excluir animais mortos do rebanho ativo
+    const matchNotDead = a.status !== 'dead';
+    return matchSearch && matchCategory && matchStatus && matchNotDead;
+  });
+
+  const displayed = filtered.slice(0, visibleCount);
+  const loadMore = () => { setVisibleCount(c => c + 10); };
+
+  // Reseta o scroll sempre que a busca textual mudar
+  useEffect(() => { setVisibleCount(10); }, [search]);
+
+  const statusLabel = (s: Animal['status']) => {
+    switch (s) {
+      case 'lactation': return 'LACTAÇÃO';
+      case 'dry': return 'SECA';
+      case 'pregnant': return 'PRENHA';
+      case 'sick': return 'DOENTE';
+      case 'pre-calving': return 'PRÉ-PARTO';
+    }
   };
 
-  // Componente nativo de cada item da lista
+  const statusColor = (s: Animal['status']) => {
+    switch (s) {
+      case 'lactation': return { bg: '#dcfce7', text: '#15803d' };
+      case 'pregnant': return { bg: '#ede9fe', text: '#7c3aed' };
+      case 'dry': return { bg: '#f1f5f9', text: '#64748b' };
+      case 'sick': return { bg: '#fef2f2', text: '#dc2626' };
+      case 'pre-calving': return { bg: '#fefce8', text: '#a16207' };
+      default: return { bg: '#f1f5f9', text: '#64748b' };
+    }
+  };
+
+  const activeFilterLabel = () => {
+    if (filterCategory === 'cow') return '🐄 Vacas';
+    if (filterCategory === 'heifer') return '🐄 Novilhas';
+    if (filterStatus === 'lactation') return '🥛 Em Lactação';
+    if (filterStatus) return statusLabel(filterStatus);
+    return null;
+  };
+
   const renderAnimal = ({ item }: { item: Animal }) => {
     const isCow = item.category === 'cow';
-    const isLactation = item.status === 'lactation';
+    const color = statusColor(item.status);
 
     return (
-      <View style={styles.card}>
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.7}
+        onPress={() => navigation.navigate('AnimalDetail', { animalId: item.id })}
+      >
         <View style={styles.cardHeader}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.animalName}>{item.name || 'Sem nome'} • Brinco {item.tag}</Text>
             <Text style={styles.animalCategory}>
               {isCow ? '🐄 Vaca' : '🐄 Novilha'} • {item.breed}
             </Text>
           </View>
-          <View style={[styles.statusBadge, isLactation ? styles.statusLactation : styles.statusDry]}>
-            <Text style={[styles.statusText, isLactation ? styles.statusTextLactation : styles.statusTextDry]}>
-              {isLactation ? 'LACTAÇÃO' : 'SECA'}
+          <View style={[styles.statusBadge, { backgroundColor: color.bg }]}>
+            <Text style={[styles.statusText, { color: color.text }]}>
+              {statusLabel(item.status)}
             </Text>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -79,20 +159,54 @@ export default function HerdScreen({ onLogout }: Props) {
     );
   }
 
+  const filterLabel = activeFilterLabel();
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>Meu Rebanho</Text>
-          <Text style={styles.onlineText}>🟢 Sincronizado (App Nativo)</Text>
+      {/* Search */}
+      <View style={styles.searchContainer}>
+        <View style={styles.headerRow}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <TouchableOpacity onPress={() => navigation.openDrawer()} style={{ padding: 4 }}>
+              <Menu size={24} color="#15803d" />
+            </TouchableOpacity>
+            <Text style={styles.pageTitle}>Meu Rebanho</Text>
+          </View>
+          <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('AnimalForm')}>
+            <Text style={styles.addBtnText}>+ NOVO</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-          <Text style={styles.logoutText}>Sair</Text>
-        </TouchableOpacity>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar por nome, brinco ou raça..."
+          placeholderTextColor="#94a3b8"
+          value={search}
+          onChangeText={setSearch}
+        />
       </View>
 
+      {/* Active filter badge */}
+      {filterLabel && (
+        <View style={styles.filterRow}>
+          <View style={styles.filterBadge}>
+            <Text style={styles.filterBadgeText}>{filterLabel}</Text>
+            <TouchableOpacity onPress={clearFilter} style={styles.filterClear}>
+              <Text style={styles.filterClearText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.filterCount}>{filtered.length} animais</Text>
+        </View>
+      )}
+
+      {/* Count (sem filtro ativo) */}
+      {!filterLabel && (
+        <View style={styles.countRow}>
+          <Text style={styles.countText}>{filtered.length} animais</Text>
+        </View>
+      )}
+
       <FlatList
-        data={animals}
+        data={displayed}
         keyExtractor={(item) => item.id}
         renderItem={renderAnimal}
         contentContainerStyle={styles.listContent}
@@ -101,114 +215,62 @@ export default function HerdScreen({ onLogout }: Props) {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Nenhum animal cadastrado no celular.</Text>
+            <Text style={styles.emptyText}>Nenhum animal encontrado.</Text>
           </View>
         }
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc', // slate-50
+  container: { flex: 1, backgroundColor: '#f8fafc' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 12, color: '#64748b' },
+
+  // Search
+  searchContainer: { paddingHorizontal: 16, paddingTop: 60, paddingBottom: 12, backgroundColor: '#fff',
+    borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  pageTitle: { fontSize: 24, fontWeight: '800', color: '#15803d' },
+  addBtn: { backgroundColor: '#16a34a', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  addBtnText: { color: '#fff', fontWeight: '700', fontSize: 12 },
+  searchInput: {
+    backgroundColor: '#f1f5f9', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12,
+    fontSize: 14, color: '#334155',
   },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+
+  // Filter badge
+  filterRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 10,
+    backgroundColor: '#f0fdf4', borderBottomWidth: 1, borderBottomColor: '#bbf7d0',
   },
-  loadingText: {
-    marginTop: 12,
-    color: '#64748b',
-  },
-  header: {
-    backgroundColor: '#fff',
-    padding: 20,
-    paddingTop: 60, // Padding para a barra de status do celular
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#15803d', // agro-green-700
-  },
-  onlineText: {
-    color: '#16a34a',
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginTop: 4,
-  },
-  logoutBtn: {
-    padding: 8,
-    backgroundColor: '#f1f5f9',
-    borderRadius: 8,
-  },
-  logoutText: {
-    color: '#64748b',
-    fontWeight: 'bold',
-  },
-  listContent: {
-    padding: 16,
-  },
+  filterBadge: { flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#15803d', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  filterBadgeText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  filterClear: { marginLeft: 4 },
+  filterClearText: { color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: '700' },
+  filterCount: { fontSize: 12, fontWeight: '700', color: '#15803d' },
+
+  // Count
+  countRow: { paddingHorizontal: 16, paddingVertical: 8 },
+  countText: { fontSize: 12, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase' },
+
+  listContent: { padding: 16, paddingTop: 4 },
+
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2, // Sombra para Android
+    backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 10,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  animalName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#334155',
-  },
-  animalCategory: {
-    fontSize: 12,
-    color: '#94a3b8',
-    marginTop: 4,
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusLactation: {
-    backgroundColor: '#dcfce7',
-  },
-  statusDry: {
-    backgroundColor: '#f1f5f9',
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  statusTextLactation: {
-    color: '#15803d',
-  },
-  statusTextDry: {
-    color: '#64748b',
-  },
-  emptyContainer: {
-    padding: 32,
-    alignItems: 'center',
-  },
-  emptyText: {
-    color: '#94a3b8',
-    fontSize: 16,
-  },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  animalName: { fontSize: 15, fontWeight: '700', color: '#334155' },
+  animalCategory: { fontSize: 12, color: '#94a3b8', marginTop: 4 },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 },
+  statusText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
+
+  emptyContainer: { padding: 32, alignItems: 'center' },
+  emptyText: { color: '#94a3b8', fontSize: 16 },
 });

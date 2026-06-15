@@ -6,23 +6,27 @@ import {
   Param,
   UseGuards,
   Request,
-  ForbiddenException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 
-@UseGuards(JwtAuthGuard)
+/**
+ * Controller de administração — todas as rotas exigem role 'admin'.
+ * A verificação é feita de forma declarativa pelo RolesGuard,
+ * sem necessidade de if manuais dentro de cada método.
+ */
+@Roles('admin')
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('admin')
 export class AdminController {
   constructor(private prisma: PrismaService) {}
 
-  /** Lista todos os usuários (somente admins) */
+  /** Lista todos os usuários */
   @Get('users')
-  async listUsers(@Request() req: any) {
-    if (req.user.role !== 'admin')
-      throw new ForbiddenException('Acesso negado');
-
-    const users = await this.prisma.user.findMany({
+  async listUsers() {
+    return this.prisma.user.findMany({
       select: {
         id: true,
         name: true,
@@ -35,21 +39,22 @@ export class AdminController {
       },
       orderBy: { createdAt: 'asc' },
     });
-    return users;
   }
 
   /** Alterna o status active de um usuário */
   @Patch('users/:id/toggle')
   async toggleUser(@Param('id') id: string, @Request() req: any) {
-    if (req.user.role !== 'admin')
-      throw new ForbiddenException('Acesso negado');
-    if (req.user.sub === id)
-      throw new ForbiddenException('Você não pode bloquear a si mesmo');
+    if (req.user.sub === id) {
+      // Proteção de negócio: admin não pode bloquear a si mesmo
+      return { error: 'Você não pode bloquear a si mesmo.' };
+    }
 
     const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) throw new ForbiddenException('Usuário não encontrado');
+    if (!user) {
+      return { error: 'Usuário não encontrado.' };
+    }
 
-    const updated = await this.prisma.user.update({
+    return this.prisma.user.update({
       where: { id },
       data: { active: !user.active },
       select: {
@@ -61,16 +66,15 @@ export class AdminController {
         active: true,
       },
     });
-    return updated;
   }
 
   /** Remove um usuário */
   @Delete('users/:id')
   async deleteUser(@Param('id') id: string, @Request() req: any) {
-    if (req.user.role !== 'admin')
-      throw new ForbiddenException('Acesso negado');
-    if (req.user.sub === id)
-      throw new ForbiddenException('Você não pode remover a si mesmo');
+    if (req.user.sub === id) {
+      // Proteção de negócio: admin não pode remover a si mesmo
+      return { error: 'Você não pode remover a si mesmo.' };
+    }
 
     await this.prisma.user.delete({ where: { id } });
     return { success: true };

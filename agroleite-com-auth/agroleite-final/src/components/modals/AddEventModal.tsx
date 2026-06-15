@@ -51,7 +51,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, a
     }
   };
 
-  const animalOptions = animals.map(a => ({ value: a.id, label: `${a.name} (${a.tag})` }));
+  const animalOptions = animals.filter(a => a.status !== 'dead').map(a => ({ value: a.id, label: `${a.name} (${a.tag})` }));
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Registrar Evento">
@@ -72,6 +72,9 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, a
             { value: 'medication', label: '💊 Medicamento' },
             { value: 'insemination', label: '🧬 Inseminação' },
             { value: 'checkup', label: '🩺 Checkup' },
+            { value: 'birth', label: '🍼 Nascimento' },
+            { value: 'purchase', label: '💵 Compra' },
+            { value: 'death', label: '🪦 Morte' },
           ]}
           value={type}
           onChange={v => setType(v as HealthEvent['type'])}

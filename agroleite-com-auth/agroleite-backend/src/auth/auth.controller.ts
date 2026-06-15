@@ -7,6 +7,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { LoginDto, RegisterDto } from './dto/auth.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -14,21 +15,21 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('login')
-  async login(@Body() signInDto: Record<string, any>) {
+  async login(@Body() signInDto: LoginDto) {
     const user = await this.authService.validateUser(
       signInDto.email,
       signInDto.password,
     );
 
     if (!user) {
-      throw new UnauthorizedException();
+      throw new UnauthorizedException('E-mail ou senha incorretos.');
     }
 
     return this.authService.login(user);
   }
 
   @Post('register')
-  async register(@Body() createUserDto: Record<string, any>) {
+  async register(@Body() createUserDto: RegisterDto) {
     return this.authService.register(createUserDto);
   }
 }

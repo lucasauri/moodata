@@ -34,30 +34,65 @@ export const HealthPage: React.FC<HealthPageProps> = ({
       
       <div className="space-y-6">
         <div className="space-y-3">
-          {events
-            .filter(e => e.type === 'medication' || e.type === 'calving')
-            .map(event => {
+          {events.map(event => {
             const animal = animals.find(a => a.id === event.animalId);
+            
+            // Determinar cores e ícones baseados no tipo do evento
+            let styleClass = 'bg-slate-50 text-slate-600';
+            let label = 'Evento';
+            
+            if (event.type === 'vaccine') {
+              styleClass = 'bg-blue-50 text-blue-600';
+              label = 'Vacina';
+            } else if (event.type === 'medication') {
+              styleClass = 'bg-amber-50 text-amber-600';
+              label = 'Medicamento';
+            } else if (event.type === 'insemination') {
+              styleClass = 'bg-purple-50 text-purple-600';
+              label = 'Inseminação';
+            } else if (event.type === 'calving') {
+              styleClass = 'bg-sky-50 text-sky-600';
+              label = 'Parto';
+            } else if (event.type === 'checkup') {
+              styleClass = 'bg-indigo-50 text-indigo-600';
+              label = 'Checkup';
+            } else if (event.type === 'birth') {
+              styleClass = 'bg-green-50 text-green-600';
+              label = 'Nascimento';
+            } else if (event.type === 'purchase') {
+              styleClass = 'bg-emerald-50 text-emerald-600';
+              label = 'Compra';
+            } else if (event.type === 'death') {
+              styleClass = 'bg-rose-50 text-rose-600';
+              label = 'Morte';
+            }
+
             return (
               <Card key={event.id} className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                  event.type === 'calving' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'
-                }`}>
-                  {event.type === 'calving' ? <Calendar size={24} /> : <Info size={24} />}
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${styleClass}`}>
+                  {event.type === 'calving' || event.type === 'birth' ? <Calendar size={24} /> : <Info size={24} />}
                 </div>
                 <div className="flex-1">
-                  <p className="font-bold text-sm">{event.description}</p>
+                  <p className="font-bold text-sm">
+                    <span className="text-xs uppercase font-extrabold tracking-wider mr-2 opacity-60">[{label}]</span>
+                    {event.description}
+                  </p>
                   <p className="text-xs text-slate-500">{animal?.name} (Brinco {animal?.tag})</p>
                 </div>
                 <div className="text-right">
                   <p className="text-xs font-bold text-agro-green-700">{format(new Date(event.date), 'dd/MM/yy')}</p>
-                  {event.withdrawalDays && (
+                  {event.withdrawalDays ? (
                     <p className="text-[10px] text-red-500 font-bold mt-1 uppercase">Carência</p>
-                  )}
+                  ) : null}
                 </div>
               </Card>
             );
           })}
+          {events.length === 0 && (
+            <div className="text-center py-12 text-slate-400 font-semibold">
+              Nenhum evento registrado.
+            </div>
+          )}
         </div>
       </div>
     </motion.div>

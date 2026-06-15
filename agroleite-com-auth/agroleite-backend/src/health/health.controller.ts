@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { HealthService } from './health.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CreateHealthEventDto } from './dto/create-health-event.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('health')
@@ -22,7 +23,7 @@ export class HealthController {
   }
 
   @Post()
-  create(@Request() req: any, @Body() body: any) {
+  create(@Request() req: any, @Body() body: CreateHealthEventDto) {
     return this.healthService.create(req.user.sub, body);
   }
 
@@ -31,3 +32,4 @@ export class HealthController {
     return this.healthService.remove(req.user.sub, id);
   }
 }
+
