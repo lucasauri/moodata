@@ -65,12 +65,26 @@ export default function AnimalFormScreen({ route, navigation }: Props) {
         ]);
       }
     } catch (error: any) {
-      const msg = error?.response?.data?.message;
-      const detail = Array.isArray(msg)
-        ? msg.join('\n')
-        : msg || 'Não foi possível salvar o animal.';
+      // Diagnóstico completo no console
+      console.warn('=== ERRO AO SALVAR ANIMAL ===');
+      console.warn('Status:', error?.response?.status);
+      console.warn('Data:', JSON.stringify(error?.response?.data));
+      console.warn('Message:', error?.message);
+
+      const responseData = error?.response?.data;
+      const msg = responseData?.message;
+
+      let detail: string;
+      if (!error?.response) {
+        // Erro de rede — servidor inacessível
+        detail = `Servidor inacessível.\nVerifique se o backend está rodando.\n(${error?.message || 'Network Error'})`;
+      } else if (Array.isArray(msg)) {
+        detail = msg.join('\n');
+      } else {
+        detail = msg || JSON.stringify(responseData) || 'Erro desconhecido.';
+      }
+
       Alert.alert('Erro ao salvar', detail);
-      console.warn('Erro API:', error?.response?.data);
     } finally {
       setSaving(false);
     }
