@@ -59,7 +59,7 @@ export default function AnimalFormScreen({ route, navigation }: Props) {
           { text: 'OK', onPress: () => navigation.goBack() },
         ]);
       } else {
-        await animalsService.createAnimal(data as any);
+        await animalsService.createAnimal(data);
         Alert.alert('✅ Animal cadastrado!', `${name || tag} foi adicionado ao rebanho.`, [
           { text: 'OK', onPress: () => navigation.goBack() },
         ]);

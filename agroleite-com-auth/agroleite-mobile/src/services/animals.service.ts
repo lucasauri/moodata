@@ -2,7 +2,9 @@ import api from './api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Animal } from '../types';
 
-const OFFLINE_KEY = '@agro_offline_animals';
+// Payload de criação: exclui id e userId (userId é extraído do JWT no servidor)
+type CreateAnimalPayload = Omit<Animal, 'id' | 'userId'>;
+type UpdateAnimalPayload = Partial<Omit<Animal, 'id' | 'userId'>>;
 
 export const animalsService = {
   getAnimals: async (): Promise<Animal[]> => {
@@ -19,12 +21,12 @@ export const animalsService = {
     }
   },
 
-  createAnimal: async (data: Omit<Animal, 'id'>): Promise<Animal> => {
+  createAnimal: async (data: CreateAnimalPayload): Promise<Animal> => {
     const response = await api.post('/animals', data);
     return response.data;
   },
 
-  updateAnimal: async (id: string, data: Partial<Animal>): Promise<Animal> => {
+  updateAnimal: async (id: string, data: UpdateAnimalPayload): Promise<Animal> => {
     const response = await api.patch(`/animals/${id}`, data);
     return response.data;
   },
@@ -33,3 +35,4 @@ export const animalsService = {
     await api.delete(`/animals/${id}`);
   },
 };
+

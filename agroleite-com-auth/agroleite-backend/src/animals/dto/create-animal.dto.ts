@@ -2,8 +2,8 @@ import { IsString, IsNotEmpty, IsOptional, IsNumber, IsDateString } from 'class-
 
 export class CreateAnimalDto {
   @IsString({ message: 'O nome deve ser um texto.' })
-  @IsNotEmpty({ message: 'O nome é obrigatório.' })
-  name: string;
+  @IsOptional()
+  name?: string;
 
   @IsString({ message: 'O brinco deve ser um texto.' })
   @IsNotEmpty({ message: 'O brinco é obrigatório.' })

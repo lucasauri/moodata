@@ -17,7 +17,7 @@ export class AnimalsService {
   async create(userId: string, data: CreateAnimalDto) {
     return this.prisma.animal.create({
       data: {
-        name: data.name,
+        name: data.name ?? '',
         tag: data.tag,
         breed: data.breed,
         category: data.category,
