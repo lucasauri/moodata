@@ -6,6 +6,8 @@ import {
   Param,
   UseGuards,
   Request,
+  ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -45,13 +47,12 @@ export class AdminController {
   @Patch('users/:id/toggle')
   async toggleUser(@Param('id') id: string, @Request() req: any) {
     if (req.user.sub === id) {
-      // Proteção de negócio: admin não pode bloquear a si mesmo
-      return { error: 'Você não pode bloquear a si mesmo.' };
+      throw new ForbiddenException('Você não pode bloquear a si mesmo.');
     }
 
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
-      return { error: 'Usuário não encontrado.' };
+      throw new NotFoundException('Usuário não encontrado.');
     }
 
     return this.prisma.user.update({
@@ -72,8 +73,7 @@ export class AdminController {
   @Delete('users/:id')
   async deleteUser(@Param('id') id: string, @Request() req: any) {
     if (req.user.sub === id) {
-      // Proteção de negócio: admin não pode remover a si mesmo
-      return { error: 'Você não pode remover a si mesmo.' };
+      throw new ForbiddenException('Você não pode remover a si mesmo.');
     }
 
     await this.prisma.user.delete({ where: { id } });

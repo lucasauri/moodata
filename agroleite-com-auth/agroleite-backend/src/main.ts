@@ -37,6 +37,6 @@ async function bootstrap() {
 
   const port = configService.get<number>('PORT') || 3000;
   await app.listen(port, '0.0.0.0'); // escuta em todas as interfaces (Wi-Fi, Tailscale, etc.)
-  console.log(`🚀 Backend rodando em http://0.0.0.0:${port}`);
+  console.log(`🚀 Backend rodando na porta ${port}`);
 }
 bootstrap();
