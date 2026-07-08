@@ -20,13 +20,8 @@ async function bootstrap() {
     }),
   );
 
-  // CORS configuration – permite origem de produção e origens de desenvolvimento
-  const allowedOrigins = [
-    'https://moodata.vercel.app',
-    'http://localhost:5173',
-    /^http:\/\/10\.0\.2\.2/, // Android emulator
-    /^http:\/\/localhost/,     // Desenvolvimento local
-  ];
+  // CORS – permite apenas a URL de produção
+  const allowedOrigins = ['https://moodata.vercel.app'];
   app.enableCors({
     origin: allowedOrigins,
     credentials: true,
