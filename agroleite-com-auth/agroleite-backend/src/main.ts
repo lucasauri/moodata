@@ -17,13 +17,9 @@ async function bootstrap() {
     }),
   );
 
-  // CORS – permite produção e preview
-  const allowedOrigins = [
-    'https://moodata.vercel.app',
-    'https://moodata-mx1ss4qxc-muudata.vercel.app',
-  ];
+  // CORS – permite todas as origens (debug apenas)
   app.enableCors({
-    origin: allowedOrigins,
+    origin: true,
     credentials: true,
   });
 
