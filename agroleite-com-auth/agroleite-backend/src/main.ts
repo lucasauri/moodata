@@ -17,9 +17,14 @@ async function bootstrap() {
     }),
   );
 
-  // CORS – permite todas as origens (debug apenas)
+  // CORS – permite apenas origens conhecidas
   app.enableCors({
-    origin: true,
+    origin: [
+      'https://moodata.vercel.app',
+      'https://moodata-mx1ss4qxc-muudata.vercel.app',
+    ],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   });
 
