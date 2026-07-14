@@ -12,6 +12,7 @@ interface AddAnimalModalProps {
 }
 
 export const AddAnimalModal: React.FC<AddAnimalModalProps> = ({ isOpen, onClose, onSave }) => {
+  const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [tag, setTag] = useState('');
   const [breed, setBreed] = useState('');
@@ -25,6 +26,7 @@ export const AddAnimalModal: React.FC<AddAnimalModalProps> = ({ isOpen, onClose,
   const [dryingDate, setDryingDate] = useState('');
 
   const resetForm = () => {
+    setError(null);
     setName(''); setTag(''); setBreed('');
     setCategory('cow'); setStatus('lactation');
     setDailyTarget(''); setWeight(''); setEcc('');
@@ -34,6 +36,7 @@ export const AddAnimalModal: React.FC<AddAnimalModalProps> = ({ isOpen, onClose,
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !tag) return;
+    setError(null);
 
     try {
       await onSave({
@@ -51,15 +54,28 @@ export const AddAnimalModal: React.FC<AddAnimalModalProps> = ({ isOpen, onClose,
       });
       resetForm();
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao cadastrar animal:', err);
-      alert('Erro ao salvar animal no servidor.');
+      const msg = err.response?.data?.message;
+      if (Array.isArray(msg)) {
+        setError(msg.join(', '));
+      } else if (typeof msg === 'string') {
+        setError(msg);
+      } else {
+        setError('Erro ao salvar animal no servidor. Tente novamente.');
+      }
     }
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Cadastrar Novo Animal">
       <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg text-sm font-medium">
+            {error}
+          </div>
+        )}
+        
         {/* Categoria */}
         <div>
           <label className="block text-sm font-bold mb-2">Categoria</label>
