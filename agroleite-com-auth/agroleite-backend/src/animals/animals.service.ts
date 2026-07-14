@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAnimalDto } from './dto/create-animal.dto';
 import { UpdateAnimalDto } from './dto/update-animal.dto';
@@ -15,6 +15,10 @@ export class AnimalsService {
   }
 
   async create(userId: string, data: CreateAnimalDto) {
+    if (data.category === 'heifer' && data.status === 'lactation') {
+      throw new BadRequestException('Uma novilha não pode estar em lactação.');
+    }
+
     return this.prisma.animal.create({
       data: {
         name: data.name ?? '',
@@ -36,7 +40,14 @@ export class AnimalsService {
   }
 
   async update(userId: string, id: string, data: UpdateAnimalDto) {
-    await this.ensureOwnership(userId, id);
+    const animal = await this.ensureOwnership(userId, id);
+
+    const category = data.category !== undefined ? data.category : animal.category;
+    const status = data.status !== undefined ? data.status : animal.status;
+
+    if (category === 'heifer' && status === 'lactation') {
+      throw new BadRequestException('Uma novilha não pode estar em lactação.');
+    }
 
     return this.prisma.animal.update({
       where: { id },
