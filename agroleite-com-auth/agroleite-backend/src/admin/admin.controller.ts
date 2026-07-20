@@ -21,14 +21,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 
-/**
- * Controller de administração — todas as rotas exigem role 'admin'.
- * A verificação é feita de forma declarativa pelo RolesGuard,
- * sem necessidade de if manuais dentro de cada método.
- */
-@Roles('admin')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Controller('admin')
+/** DTO para criação de usuário pelo painel admin (aceita role). */
 class AdminCreateUserDto {
   @IsString()
   @IsNotEmpty({ message: 'Nome é obrigatório.' })
@@ -55,8 +48,16 @@ class AdminCreateUserDto {
   farmName?: string;
 }
 
+/**
+ * Controller de administração — todas as rotas exigem role 'admin'.
+ * A verificação é feita de forma declarativa pelo RolesGuard,
+ * sem necessidade de if manuais dentro de cada método.
+ */
+@Roles('admin')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Controller('admin')
 export class AdminController {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   /** Cria um usuário com role definido pelo admin */
   @Post('users')
