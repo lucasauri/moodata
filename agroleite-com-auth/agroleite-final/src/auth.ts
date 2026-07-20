@@ -58,7 +58,7 @@ export async function createUser(params: {
   farmName?: string;
 }): Promise<{ success: boolean; error?: string; user?: AppUser }> {
   try {
-    const response = await api.post('/auth/register', params);
+    const response = await api.post('/admin/users', params);
     return { success: true, user: response.data };
   } catch (error: any) {
     const errorMsg = error.response?.data?.message || 'Erro ao criar usuário.';
