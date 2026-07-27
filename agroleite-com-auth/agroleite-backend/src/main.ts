@@ -17,12 +17,28 @@ async function bootstrap() {
     }),
   );
 
-  // CORS – permite apenas origens conhecidas
+  // CORS – permite origens de produção e locais para desenvolvimento/testes
   app.enableCors({
-    origin: [
-      'https://moodata.vercel.app',
-      'https://moodata-mx1ss4qxc-muudata.vercel.app',
-    ],
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        'https://moodata.vercel.app',
+        'https://moodata-mx1ss4qxc-muudata.vercel.app',
+      ];
+      // Permite requisições sem origin (como aplicativos mobile nativos)
+      // e origens de desenvolvimento local (localhost, tailscale, etc.)
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        origin.startsWith('http://localhost:') ||
+        origin.startsWith('http://127.0.0.1:') ||
+        origin.startsWith('http://10.0.2.2:') ||
+        origin.startsWith('http://100.') // IPs do Tailscale começam com 100.x.x.x
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error('Bloqueado por CORS'));
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
