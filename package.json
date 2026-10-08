@@ -1,0 +1,8 @@
+{
+  "name": "moodata-root",
+  "private": true,
+  "scripts": {
+    "build": "cd agroleite-com-auth/agroleite-final && npm install && npm run build",
+    "deploy": "npm run build && npx wrangler deploy"
+  }
+}
