@@ -18,17 +18,27 @@ async function bootstrap() {
   );
 
   // CORS – permite origens de produção e locais para desenvolvimento/testes
+  const frontendEnv = configService.get<string>('FRONTEND_URL');
+  const customOrigins = frontendEnv
+    ? frontendEnv.split(',').map((url) => url.trim().replace(/\/$/, ''))
+    : [];
+
   app.enableCors({
     origin: (origin, callback) => {
       const allowedOrigins = [
         'https://moodata.vercel.app',
         'https://moodata-mx1ss4qxc-muudata.vercel.app',
+        ...customOrigins,
       ];
+
       // Permite requisições sem origin (como aplicativos mobile nativos)
+      // origens do Cloudflare (*.pages.dev, *.workers.dev)
       // e origens de desenvolvimento local (localhost, tailscale, etc.)
       if (
         !origin ||
         allowedOrigins.includes(origin) ||
+        origin.endsWith('.pages.dev') ||
+        origin.endsWith('.workers.dev') ||
         origin.startsWith('http://localhost:') ||
         origin.startsWith('http://127.0.0.1:') ||
         origin.startsWith('http://10.0.2.2:') ||
@@ -36,7 +46,7 @@ async function bootstrap() {
       ) {
         callback(null, true);
       } else {
-        callback(new Error('Bloqueado por CORS'));
+        callback(new Error(`Bloqueado por CORS: ${origin}`));
       }
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

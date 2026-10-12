@@ -1,16 +1,14 @@
-// prisma.config.ts – versão final garantida
-import "dotenv/config";                     // << IMPORTA .env imediatamente
-import { defineConfig, env } from "prisma/config";
+// prisma.config.ts
+// O `prisma generate` apenas gera o client a partir do schema.prisma —
+// não precisa da DATABASE_URL em tempo de build. O `db push` e `migrate`
+// são executados em tempo de runtime (start command), quando as variáveis
+// de ambiente já estão disponíveis.
+import 'dotenv/config';
+import { defineConfig } from 'prisma/config';
 
 export default defineConfig({
-  schema: "prisma/schema.prisma",
+  schema: 'prisma/schema.prisma',
   migrations: {
-    path: "prisma/migrations",
-  },
-  engine: "classic",
-  datasource: {
-    url: env("DATABASE_URL"),
-    // Esta linha usa a variável SHADOW_DATABASE_URL que já está no .env
-    shadowDatabaseUrl: env("SHADOW_DATABASE_URL"),
+    path: 'prisma/migrations',
   },
 });
