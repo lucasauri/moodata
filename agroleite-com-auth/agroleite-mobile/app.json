@@ -24,7 +24,7 @@
       "package": "com.lucastavares0694sorganization.moodata"
     },
     "web": {
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
