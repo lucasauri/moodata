@@ -31,17 +31,24 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin, callback) => {
+      // Aplicativos nativos (Expo/React Native) normalmente não enviam
+      // o cabeçalho Origin. CORS é uma proteção de navegadores; permitir
+      // requisições sem Origin mantém o controle de autenticação no JWT
+      // sem abrir as origens de navegador em produção.
+      if (!origin) {
+        return callback(null, true);
+      }
+
       if (origin && productionOrigins.includes(origin)) {
         return callback(null, true);
       }
 
       if (!isProduction) {
-        const isLocalOrigin = !origin
-          || origin.startsWith('http://localhost:')
+        const isLocalOrigin = origin.startsWith('http://localhost:')
           || origin.startsWith('http://127.0.0.1:')
           || origin.startsWith('http://10.0.2.2:')
           || origin.startsWith('http://100.')
-          || /^https?:\/\/\d{1,3}(\.\d{1,3}){3}(:\d+)?$/.test(origin ?? '');
+          || /^https?:\/\/\d{1,3}(\.\d{1,3}){3}(:\d+)?$/.test(origin);
 
         if (isLocalOrigin) return callback(null, true);
       }
