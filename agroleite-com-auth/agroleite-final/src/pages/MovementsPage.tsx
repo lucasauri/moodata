@@ -12,12 +12,12 @@ interface MovementsPageProps {
 
 export const MovementsPage: React.FC<MovementsPageProps> = ({ events, animals }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'all' | 'birth' | 'purchase' | 'death'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'birth' | 'purchase' | 'sale' | 'death'>('all');
 
   // Filter only movements and match type + search term
   const filteredEvents = useMemo(() => {
     const movements = events.filter(e =>
-      e.type === 'birth' || e.type === 'purchase' || e.type === 'death'
+      ['birth', 'purchase', 'sale', 'death', 'calving', 'drying', 'coverage', 'insemination', 'pregnancy_diagnosis'].includes(e.type)
     );
 
     return movements.filter(e => {
@@ -39,6 +39,12 @@ export const MovementsPage: React.FC<MovementsPageProps> = ({ events, animals })
   const typeLabel = (t: string) => {
     if (t === 'birth') return 'Nascimento';
     if (t === 'purchase') return 'Compra';
+    if (t === 'sale') return 'Venda';
+    if (t === 'calving') return 'Parto';
+    if (t === 'drying') return 'Secagem';
+    if (t === 'coverage') return 'Cobertura';
+    if (t === 'insemination') return 'Inseminação';
+    if (t === 'pregnancy_diagnosis') return 'Diagnóstico de prenhez';
     if (t === 'death') return 'Morte';
     return t;
   };
@@ -46,6 +52,7 @@ export const MovementsPage: React.FC<MovementsPageProps> = ({ events, animals })
   const getStyle = (t: string) => {
     if (t === 'birth') return { bg: 'bg-green-50 text-green-700 border-green-200', icon: <ArrowUpRight size={16} /> };
     if (t === 'purchase') return { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: <ArrowUpRight size={16} /> };
+    if (t === 'sale') return { bg: 'bg-amber-50 text-amber-700 border-amber-200', icon: <ArrowDownRight size={16} /> };
     if (t === 'death') return { bg: 'bg-rose-50 text-rose-700 border-rose-200', icon: <ArrowDownRight size={16} /> };
     return { bg: 'bg-slate-50 text-slate-700 border-slate-200', icon: <Activity size={16} /> };
   };
@@ -68,7 +75,8 @@ export const MovementsPage: React.FC<MovementsPageProps> = ({ events, animals })
           { id: 'all', label: 'Todos', icon: '📋' },
           { id: 'birth', label: 'Nascimentos', icon: '🍼' },
           { id: 'purchase', label: 'Compras', icon: '💵' },
-          { id: 'death', label: 'Mortes', icon: '🪦' }
+          { id: 'death', label: 'Mortes', icon: '🪦' },
+          { id: 'sale', label: 'Vendas', icon: '💰' },
         ].map(cat => (
           <button
             key={cat.id}

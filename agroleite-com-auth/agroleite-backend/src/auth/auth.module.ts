@@ -6,6 +6,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
 import { PrismaModule } from '../prisma/prisma.module';
+import { getRequiredJwtSecret } from './security-config';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { PrismaModule } from '../prisma/prisma.module';
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
+        secret: getRequiredJwtSecret(configService),
         signOptions: { expiresIn: '1d' },
       }),
     }),

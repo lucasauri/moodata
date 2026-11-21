@@ -82,5 +82,11 @@
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
+  },
+  "overrides": {
+    "body-parser": "1.20.9",
+    "multer": "2.3.0",
+    "proxy-addr": "2.0.8",
+    "qs": "6.16.2"
   }
 }

@@ -52,4 +52,32 @@ export class CreateAnimalDto {
   @IsDateString({}, { message: 'Data de secagem inválida.' })
   @IsOptional()
   dryingDate?: string;
+
+  @IsString({ message: 'A linha genética deve ser um texto.' })
+  @IsOptional()
+  geneticLine?: string;
+
+  @IsString({ message: 'A origem deve ser um texto.' })
+  @IsOptional()
+  origin?: string;
+
+  @IsString({ message: 'O nome do pai deve ser um texto.' })
+  @IsOptional()
+  sireName?: string;
+
+  @IsString({ message: 'O nome da mãe deve ser um texto.' })
+  @IsOptional()
+  damName?: string;
+
+  @IsString({ message: 'O brinco do pai deve ser um texto.' })
+  @IsOptional()
+  fatherTag?: string;
+
+  @IsString({ message: 'O brinco da mãe deve ser um texto.' })
+  @IsOptional()
+  motherTag?: string;
+
+  @IsString({ message: 'O código de registro deve ser um texto.' })
+  @IsOptional()
+  registrationCode?: string;
 }

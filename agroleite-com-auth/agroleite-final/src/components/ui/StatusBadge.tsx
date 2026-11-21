@@ -8,6 +8,7 @@ const STATUS_CONFIG: Record<Animal['status'], { label: string; className: string
   'pre-calving': { label: 'Pré-Parto', className: 'bg-orange-100 text-orange-700' },
   sick: { label: 'Doente', className: 'bg-red-100 text-red-700' },
   dead: { label: 'Baixado/Morto', className: 'bg-red-100 text-red-700' },
+  sold: { label: 'Vendido', className: 'bg-amber-100 text-amber-700' },
 };
 
 interface StatusBadgeProps {

@@ -25,6 +25,10 @@ export class CreateProductionDto {
   @IsNotEmpty({ message: 'O destino é obrigatório.' })
   destination: string;
 
+  @IsString({ message: 'O lote deve ser um texto.' })
+  @IsOptional()
+  batchNumber?: string;
+
   @IsString({ message: 'A observação deve ser um texto.' })
   @IsOptional()
   observation?: string;

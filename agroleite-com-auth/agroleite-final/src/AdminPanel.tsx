@@ -325,6 +325,7 @@ function UserCard({
   user, isSelf = false, onToggle, onDelete
 }: {
   user: AppUser;
+  key?: React.Key;
   isSelf?: boolean;
   onToggle?: () => void;
   onDelete?: () => void;

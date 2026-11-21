@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductionDto } from './dto/create-production.dto';
 
@@ -22,6 +22,9 @@ export class ProductionsService {
     if (!animal) {
       throw new NotFoundException('Animal não encontrado para este usuário.');
     }
+    if (animal.status !== 'lactation') {
+      throw new BadRequestException('Só é possível lançar produção para animais em lactação.');
+    }
 
     return this.prisma.milkProduction.create({
       data: {
@@ -31,6 +34,7 @@ export class ProductionsService {
         period: data.period,
         quality: data.quality,
         destination: data.destination,
+        batchNumber: data.batchNumber?.trim() || 'geral',
         observation: data.observation ?? null,
         userId,
       },

@@ -113,9 +113,9 @@ export function useFarmData(userId: string, userName: string, farmName?: string)
   const addEvent = useCallback(async (data: Omit<HealthEvent, 'id'>) => {
     const saved = await healthService.createEvent(data);
     setEvents(prev => [saved, ...prev]);
-    if (data.type === 'death') {
-      setAnimals(prev => prev.map(a => a.id === data.animalId ? { ...a, status: 'dead' } : a));
-    }
+    // O backend é a fonte das regras; recarregar aplica a transição persistida.
+    const refreshedAnimals = await animalService.getAnimals();
+    setAnimals(refreshedAnimals);
   }, []);
 
   const toggleAnimalStatus = useCallback(async (id: string) => {

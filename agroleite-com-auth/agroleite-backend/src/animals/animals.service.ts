@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { applyCalvingTransition, validateAnimalState } from './animal-reproduction';
 import { CreateAnimalDto } from './dto/create-animal.dto';
 import { UpdateAnimalDto } from './dto/update-animal.dto';
 
@@ -15,9 +16,7 @@ export class AnimalsService {
   }
 
   async create(userId: string, data: CreateAnimalDto) {
-    if (data.category === 'heifer' && data.status === 'lactation') {
-      throw new BadRequestException('Uma novilha não pode estar em lactação.');
-    }
+    validateAnimalState(data.category, data.status);
 
     return this.prisma.animal.create({
       data: {
@@ -34,6 +33,13 @@ export class AnimalsService {
         lastCalving: data.lastCalving ? new Date(data.lastCalving) : null,
         expectedCalving: data.expectedCalving ? new Date(data.expectedCalving) : null,
         dryingDate: data.dryingDate ? new Date(data.dryingDate) : null,
+        geneticLine: data.geneticLine ?? null,
+        origin: data.origin ?? null,
+        sireName: data.sireName ?? null,
+        damName: data.damName ?? null,
+        fatherTag: data.fatherTag ?? null,
+        motherTag: data.motherTag ?? null,
+        registrationCode: data.registrationCode ?? null,
         userId,
       },
     });
@@ -45,9 +51,7 @@ export class AnimalsService {
     const category = data.category !== undefined ? data.category : animal.category;
     const status = data.status !== undefined ? data.status : animal.status;
 
-    if (category === 'heifer' && status === 'lactation') {
-      throw new BadRequestException('Uma novilha não pode estar em lactação.');
-    }
+    validateAnimalState(category, status);
 
     return this.prisma.animal.update({
       where: { id },
@@ -65,6 +69,13 @@ export class AnimalsService {
         ...(data.lastCalving !== undefined && { lastCalving: data.lastCalving ? new Date(data.lastCalving) : null }),
         ...(data.expectedCalving !== undefined && { expectedCalving: data.expectedCalving ? new Date(data.expectedCalving) : null }),
         ...(data.dryingDate !== undefined && { dryingDate: data.dryingDate ? new Date(data.dryingDate) : null }),
+        ...(data.geneticLine !== undefined && { geneticLine: data.geneticLine ?? null }),
+        ...(data.origin !== undefined && { origin: data.origin ?? null }),
+        ...(data.sireName !== undefined && { sireName: data.sireName ?? null }),
+        ...(data.damName !== undefined && { damName: data.damName ?? null }),
+        ...(data.fatherTag !== undefined && { fatherTag: data.fatherTag ?? null }),
+        ...(data.motherTag !== undefined && { motherTag: data.motherTag ?? null }),
+        ...(data.registrationCode !== undefined && { registrationCode: data.registrationCode ?? null }),
       },
     });
   }

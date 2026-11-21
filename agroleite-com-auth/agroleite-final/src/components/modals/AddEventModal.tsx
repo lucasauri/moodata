@@ -68,6 +68,11 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, a
         <Select
           label="Tipo de Evento"
           options={[
+            { value: 'coverage', label: 'Cobertura' },
+            { value: 'pregnancy_diagnosis', label: 'Diagnóstico de prenhez' },
+            { value: 'drying', label: 'Secagem' },
+            { value: 'calving', label: 'Parto' },
+            { value: 'sale', label: 'Venda' },
             { value: 'vaccine', label: '💉 Vacina' },
             { value: 'medication', label: '💊 Medicamento' },
             { value: 'insemination', label: '🧬 Inseminação' },

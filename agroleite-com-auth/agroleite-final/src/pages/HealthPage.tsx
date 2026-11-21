@@ -47,6 +47,15 @@ export const HealthPage: React.FC<HealthPageProps> = ({
             } else if (event.type === 'medication') {
               styleClass = 'bg-amber-50 text-amber-600';
               label = 'Medicamento';
+            } else if (event.type === 'coverage') {
+              styleClass = 'bg-purple-50 text-purple-600';
+              label = 'Cobertura';
+            } else if (event.type === 'pregnancy_diagnosis') {
+              styleClass = 'bg-violet-50 text-violet-600';
+              label = 'Diagnóstico de prenhez';
+            } else if (event.type === 'drying') {
+              styleClass = 'bg-orange-50 text-orange-600';
+              label = 'Secagem';
             } else if (event.type === 'insemination') {
               styleClass = 'bg-purple-50 text-purple-600';
               label = 'Inseminação';
@@ -59,6 +68,9 @@ export const HealthPage: React.FC<HealthPageProps> = ({
             } else if (event.type === 'birth') {
               styleClass = 'bg-green-50 text-green-600';
               label = 'Nascimento';
+            } else if (event.type === 'sale') {
+              styleClass = 'bg-amber-50 text-amber-600';
+              label = 'Venda';
             } else if (event.type === 'purchase') {
               styleClass = 'bg-emerald-50 text-emerald-600';
               label = 'Compra';

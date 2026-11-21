@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { applyMovementTransition, ReproductionEventType } from '../animals/animal-reproduction';
 import { CreateHealthEventDto } from './dto/create-health-event.dto';
 
 @Injectable()
@@ -23,28 +24,37 @@ export class HealthService {
       throw new NotFoundException('Animal não encontrado para este usuário.');
     }
 
-    const event = await this.prisma.healthEvent.create({
-      data: {
-        animalId: data.animalId,
-        type: data.type,
-        description: data.description,
-        date: data.date ? new Date(data.date) : new Date(),
-        nextDoseDate: data.nextDoseDate ? new Date(data.nextDoseDate) : null,
-        responsible: data.responsible ?? null,
-        withdrawalDays: data.withdrawalDays ?? null,
-        userId,
-      },
-    });
+    const eventDate = data.date ? new Date(data.date) : new Date();
+    const movementTypes = new Set<ReproductionEventType>([
+      'birth', 'calving', 'drying', 'insemination', 'coverage',
+      'pregnancy_diagnosis', 'sale', 'death',
+    ]);
 
-    // Lógica de negócio: morte do animal atualiza seu status automaticamente
-    if (data.type === 'death') {
-      await this.prisma.animal.update({
-        where: { id: data.animalId },
-        data: { status: 'dead' },
+    return this.prisma.$transaction(async (tx) => {
+      const event = await tx.healthEvent.create({
+        data: {
+          animalId: data.animalId,
+          type: data.type,
+          description: data.description,
+          date: eventDate,
+          nextDoseDate: data.nextDoseDate ? new Date(data.nextDoseDate) : null,
+          responsible: data.responsible ?? null,
+          withdrawalDays: data.withdrawalDays ?? null,
+          userId,
+        },
       });
-    }
 
-    return event;
+      if (movementTypes.has(data.type as ReproductionEventType)) {
+        const state = applyMovementTransition(
+          data.type as ReproductionEventType,
+          animal.status,
+          eventDate,
+        );
+        await tx.animal.update({ where: { id: data.animalId }, data: state });
+      }
+
+      return event;
+    });
   }
 
   async remove(userId: string, id: string) {
